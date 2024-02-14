@@ -1,9 +1,9 @@
-import './globals.css'
-import type { Metadata } from 'next'
-import { Open_Sans } from 'next/font/google'
-import { AuthProvider } from '@/components/providers/auth-provider';
-import { cn } from '@/lib/utils'
-import { ThemeProvider } from '@/components/providers/theme-provider'
+import './globals.css';
+import type { Metadata } from 'next';
+import { Open_Sans } from 'next/font/google';
+import { cn } from '@/lib/utils';
+import { AuthProvider } from '@/components/providers/AuthProvider';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
 const inter = Open_Sans({ subsets: ['latin'] })
 
@@ -14,26 +14,28 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
+}>) {
   return (
-    <AuthProvider>
-      <html>
-        <body className={cn(
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={cn(
           inter.className,
           "bg-white dark:bg-[#313338]"
-        )}>
-          <ThemeProvider
-            attribute='class'
-            defaultTheme='dark'
-            enableSystem={false}
-            storageKey='discord-theme'
-          >
+        )}
+      >
+        <ThemeProvider
+          attribute='class'
+          defaultTheme='dark'
+          enableSystem={false}
+          storageKey='discord-theme'
+        >
+          <AuthProvider>
             {children}
-          </ThemeProvider>
-        </body>
-      </html>
-    </AuthProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </body>
+    </html>
   )
 }

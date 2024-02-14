@@ -3,6 +3,7 @@ package handlers
 import (
 	"discord-backend/internal/app/models"
 	"discord-backend/internal/app/services"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -55,4 +56,33 @@ func (p *ProfileHandler) UpdateProfile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"user": user})
+}
+
+func (p *ProfileHandler) GetMyProfile(c *gin.Context) {
+	profileIDInterface, exists := c.Get("profile_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "profile_id not found"})
+		return
+	}
+
+	profileIDStr, ok := profileIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid profile_id format"})
+		return
+	}
+
+	profileID, err := uuid.Parse(profileIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid profile_id format"})
+		return
+	}
+
+	fmt.Println(profileID)
+	profile, err := p.ProfileService.GetProfileByID(profileID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"profile": profile})
 }

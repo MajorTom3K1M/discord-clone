@@ -10,5 +10,5 @@ func AuthRoutes(router *gin.Engine, authHandler *handlers.AuthHandler) {
 	router.POST("/signup", authHandler.SignUp)
 	router.POST("/signin", authHandler.SignIn)
 	router.POST("/signout", authHandler.SignOut)
-	router.POST("/refresh", authHandler.Refresh)
+	router.GET("/refresh", authHandler.Refresh)
 }

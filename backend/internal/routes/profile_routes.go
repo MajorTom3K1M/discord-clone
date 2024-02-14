@@ -9,6 +9,7 @@ import (
 func ProfileRoutes(protected *gin.RouterGroup, profileHandler *handlers.ProfileHandler) {
 	profileGroup := protected.Group("/profile")
 	{
+		profileGroup.GET("/auth/me", profileHandler.GetMyProfile)
 		profileGroup.GET("/:id", profileHandler.GetProfile)
 		profileGroup.POST("/:id", profileHandler.UpdateProfile)
 	}

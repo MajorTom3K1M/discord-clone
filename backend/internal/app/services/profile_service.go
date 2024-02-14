@@ -16,12 +16,25 @@ func NewProfileService(db *gorm.DB) *ProfileService {
 	return &ProfileService{DB: db}
 }
 
-func (p *ProfileService) GetProfileByID(profileID uuid.UUID) (*models.Profile, error) {
+func (p *ProfileService) GetProfileByID(profileID uuid.UUID) (*models.ProfileResponse, error) {
 	var profile models.Profile
 	if result := p.DB.First(&profile, profileID); result.Error != nil {
 		return nil, result.Error
 	}
-	return &profile, nil
+
+	profileResponse := models.ProfileResponse{
+		ID:        profile.ID,
+		Name:      profile.Name,
+		ImageURL:  profile.ImageURL,
+		Email:     profile.Email,
+		Servers:   profile.Servers,
+		Members:   profile.Members,
+		Channels:  profile.Channels,
+		CreatedAt: profile.CreatedAt,
+		UpdatedAt: profile.UpdatedAt,
+	}
+
+	return &profileResponse, nil
 }
 
 func (p *ProfileService) UpdateProfile(userID uuid.UUID, updatedData models.Profile) (*models.Profile, error) {

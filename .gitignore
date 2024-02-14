@@ -1,6 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
+node_modules
 /frontend/node_modules
 /frontend/.pnp
 /frontend/.pnp.js
@@ -14,6 +15,7 @@
 /frontend/out/
 
 # production
+/backend/main
 /frontend/build
 
 # misc
@@ -38,4 +40,5 @@ next-env.d.ts
 
 discord-backend
 
+go.sum
 package-lock.json

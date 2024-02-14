@@ -64,9 +64,12 @@ func (h *AuthHandler) SignIn(c *gin.Context) {
 		return
 	}
 
+	// c.Header("Authorization", "Bearer "+tokens["accessToken"])
+
 	maxAge := int(time.Hour * 72 / time.Second)
 	c.SetCookie("refresh_token", tokens["refreshToken"], maxAge, "/", "", true, true)
-	c.JSON(http.StatusOK, gin.H{"message": "Login successful", "profile": profile, "accessToken": tokens["accessToken"]})
+	c.SetCookie("access_token", tokens["accessToken"], maxAge, "/", "", false, true)
+	c.JSON(http.StatusOK, gin.H{"message": "Login successful", "profile": profile})
 }
 
 func (h *AuthHandler) SignOut(c *gin.Context) {
@@ -128,10 +131,14 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		return
 	}
 
-	c.Header("Authorization", "Bearer "+tokens["accessToken"])
+	if err := h.TokenService.UpsertRefreshToken(profileID, tokens["refreshToken"]); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error upsert JWT token to database"})
+		return
+	}
 
 	maxAge := int(time.Hour * 72 / time.Second)
 	c.SetCookie("refresh_token", tokens["refreshToken"], maxAge, "/", "", true, true)
+	c.SetCookie("access_token", tokens["accessToken"], maxAge, "/", "", false, true)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Tokens refreshed"})
 }
