@@ -5,14 +5,36 @@ import axios, { fetchDataWithCancellation, isCancel } from '@/utils/axios';
 
 const publicPages = ['/sign-in', '/sign-up'];
 
-export const AuthContext = createContext({
+interface Profile {
+    id: string;
+    name: string;
+    imageUrl: string;
+    email: string;
+    servers: any[] | null;
+    members: any[] | null;
+    channels: any[] | null;
+    created_at: string;
+    updated_at: string;
+}
+
+interface AuthState {
+    profile: Profile | null;
+}
+
+interface AuthContextType {
+    authState: AuthState;
+    isPublicPage: boolean;
+    signin: (email: string, password: string) => Promise<void>;
+    signup: (name: string, imageUrl: string, email: string, password: string) => Promise<void>;
+    signout: () => Promise<void>;
+}
+
+export const AuthContext = createContext<AuthContextType>({
     authState: { profile: null },
-    loading: false,
     isPublicPage: false,
     signin: async (email: string, password: string) => { },
     signup: async (name: string, imageUrl: string, email: string, password: string) => { },
     signout: async () => { },
-    // fetchProfile: async () => { }
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -22,7 +44,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [authState, setAuthState] = useState({
         profile: null
     });
-    const [loading, setLoading] = useState(true);
     const isPublicPage = publicPages.includes(pathname);
 
     const signin = async (email: string, password: string) => {
@@ -60,8 +81,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 } else {
                     console.error('An error occurred:', error.message);
                 }
-            }).finally(() => {
-                setLoading(false);
             })
         }
 
@@ -69,12 +88,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return () => cancel('Component unmounted: Operation canceled by the user.');
     }, []);
 
-    // if (loading) {
-    //     return <>Loading...</>
-    // }
-
     return (
-        <AuthContext.Provider value={{ authState, loading, signin, signout, signup, isPublicPage }}>
+        <AuthContext.Provider value={{ authState, signin, signout, signup, isPublicPage }}>
             {authState.profile === null && !isPublicPage ? <>Loading...</> : children}
         </AuthContext.Provider>
     )

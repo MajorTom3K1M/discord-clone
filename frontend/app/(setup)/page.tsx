@@ -1,5 +1,7 @@
+import { InitialModal } from '@/components/modals/InitialModal';
+
 const SetupPage = () => {
-    return <div>Create a Server</div>
+    return <InitialModal />
 }
  
 export default SetupPage;
