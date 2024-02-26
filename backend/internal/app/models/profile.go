@@ -8,16 +8,16 @@ import (
 )
 
 type Profile struct {
-	ID        uuid.UUID `gorm:"type:uuid;primary_key;"`
-	Name      string
-	ImageURL  string `gorm:"type:text"`
-	Email     string `gorm:"type:text"`
-	Password  string
-	Servers   []Server  `gorm:"foreignKey:ProfileID"`
-	Members   []Member  `gorm:"foreignKey:ProfileID"`
-	Channels  []Channel `gorm:"foreignKey:ProfileID"`
-	CreatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP"`
-	UpdatedAt time.Time
+	ID        uuid.UUID `gorm:"type:uuid;primary_key;" json:"id"`
+	Name      string    `json:"name"`
+	ImageURL  string    `gorm:"type:text" json:"imageUrl"`
+	Email     string    `gorm:"type:text" json:"email"`
+	Password  string    `json:"-"`
+	Servers   []Server  `gorm:"foreignKey:ProfileID" json:"servers"`
+	Members   []Member  `gorm:"foreignKey:ProfileID" json:"members"`
+	Channels  []Channel `gorm:"foreignKey:ProfileID" json:"channels"`
+	CreatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (profile *Profile) BeforeCreate(tx *gorm.DB) (err error) {

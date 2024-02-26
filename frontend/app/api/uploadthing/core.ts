@@ -1,20 +1,23 @@
-import { useAuth } from '@/components/providers/AuthProvider';
+import { decodeJwtPayload } from '@/lib/utils';
+import { NextRequest } from 'next/server';
 import { createUploadthing, type FileRouter } from 'uploadthing/next';
 
 const f = createUploadthing();
 
-const handleAuth = () => {
-    const { authState } = useAuth();
-    if(!authState.profile) throw new Error("Unauthorized");
-    return { profileId: authState.profile.id };
+const handleAuth = (req: NextRequest) => {
+    const token = req.cookies.get('access_token')?.value as string;
+
+    if(!token) throw new Error("Unauthorized");
+    const payload = decodeJwtPayload(token);
+    return { profileId: payload.profile_id };
 };
 
 export const ourFileRouter = {
     serverImage: f({ image: { maxFileSize: "4MB", maxFileCount: 1 } })
-        .middleware(() => handleAuth())
+        .middleware(({ req }) => handleAuth(req))
         .onUploadComplete(() => {}),
     messageFile: f(["image", "pdf"])
-        .middleware(() => handleAuth())
+        .middleware(({ req }) => handleAuth(req))
         .onUploadComplete(() => {})
 } satisfies FileRouter;
 

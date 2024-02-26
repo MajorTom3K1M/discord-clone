@@ -1,4 +1,5 @@
 "use client"
+import axios from '@/utils/axios';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod'
 
@@ -64,6 +65,8 @@ export const InitialModal = () => {
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         try {
+            await axios.post("/server", values);
+
             form.reset();
             router.refresh();
             window.location.reload();
