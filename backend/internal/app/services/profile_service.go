@@ -18,7 +18,7 @@ func NewProfileService(db *gorm.DB) *ProfileService {
 
 func (p *ProfileService) GetProfileByID(profileID uuid.UUID) (*models.ProfileResponse, error) {
 	var profile models.Profile
-	if result := p.DB.First(&profile, profileID); result.Error != nil {
+	if result := p.DB.Preload("Servers").First(&profile, profileID); result.Error != nil {
 		return nil, result.Error
 	}
 

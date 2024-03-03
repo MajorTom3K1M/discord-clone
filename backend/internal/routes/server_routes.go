@@ -11,4 +11,9 @@ func ServerRoutes(protected *gin.RouterGroup, serverHandler *handlers.ServerHand
 	{
 		serverGroup.POST("", serverHandler.CreateServer)
 	}
+
+	serversGroup := protected.Group("/servers")
+	{
+		serversGroup.GET("", serverHandler.GetServers)
+	}
 }

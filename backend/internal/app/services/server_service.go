@@ -47,3 +47,17 @@ func (s *ServerService) CreateServer(profileID uuid.UUID, name string, imageUrl 
 
 	return &server, nil
 }
+
+func (s *ServerService) GetServers(profileID uuid.UUID) ([]models.Server, error) {
+	var servers []models.Server
+	err := s.DB.Joins("JOIN members ON members.server_id = servers.id").
+		Where("members.profile_id = ?", profileID).
+		Distinct("servers.*").
+		Find(&servers).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return servers, nil
+}

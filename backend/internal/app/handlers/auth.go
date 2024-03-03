@@ -100,6 +100,18 @@ func (h *AuthHandler) SignOut(c *gin.Context) {
 }
 
 func (h *AuthHandler) Refresh(c *gin.Context) {
+	tx := h.TokenService.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	if err := tx.Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Transaction start error"})
+		return
+	}
+
 	refreshTokenCookie, err := c.Request.Cookie("refresh_token")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing refresh token"})
@@ -136,9 +148,49 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		return
 	}
 
+	if err := tx.Commit().Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Transaction commit error"})
+		return
+	}
+
 	maxAge := int(time.Hour * 72 / time.Second)
 	c.SetCookie("refresh_token", tokens["refreshToken"], maxAge, "/", "", true, true)
 	c.SetCookie("access_token", tokens["accessToken"], maxAge, "/", "", false, true)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Tokens refreshed"})
+}
+
+func (h *AuthHandler) ServerRefresh(c *gin.Context) {
+	refreshTokenCookie, err := c.Request.Cookie("refresh_token")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing refresh token"})
+		return
+	}
+
+	claims, err := services.VerifyToken(refreshTokenCookie.Value)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		return
+	}
+
+	profileIDString := claims["profile_id"].(string)
+	name := claims["name"].(string)
+	profileID, err := uuid.Parse(profileIDString)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse UUID from claims"})
+		return
+	}
+
+	if err := h.TokenService.FindRefreshToken(profileID, refreshTokenCookie.Value); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid refresh token"})
+		return
+	}
+
+	tokens, err := services.GenerateTokens(profileID, name)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Tokens refreshed", "access_token": tokens})
 }

@@ -1,33 +1,119 @@
-import axios, { AxiosInstance } from 'axios';
-import { refreshToken } from '@/services/auth/refreshToken';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { serverRefreshToken } from '@/services/auth/serverRefreshToken';
+import { clientRefreshToken } from '@/services/auth/clientRefreshToken';
 import { handleRefreshTokenError } from '@/services/auth/errorHandlers';
-import { useRouter } from 'next/navigation';
+
+interface RetryQueueItem {
+  resolve: (value: any) => void;
+  reject: (error: any) => void;
+  config: AxiosRequestConfig;
+}
 
 export const setupInterceptors = (axiosInstance: AxiosInstance) => {
-    axiosInstance.interceptors.request.use(
-        config => config,
-        error => Promise.reject(error)
-    );
+  let isRefreshing = false;
+  const refreshAndRetryQueue: RetryQueueItem[] = [];
 
-    axiosInstance.interceptors.response.use(
-        reponse => reponse,
-        async error => {
-            const originalRequest = error.config;
+  axiosInstance.interceptors.request.use(
+    config => config,
+    error => Promise.reject(error)
+  );
 
-      
-            if (!axios.isCancel(error) && error.response.status === 401 && !originalRequest._retry) {
-                originalRequest._retry = true;
+  axiosInstance.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      const originalRequest: AxiosRequestConfig & { _retry: boolean, headers: { Cookie: string } } = error.config;
 
-                try {
-                    await refreshToken();
-                    return axiosInstance(originalRequest);
-                } catch (error) {
-                    handleRefreshTokenError();
-                    return Promise.reject(error);
-                }
+      if (!axios.isCancel(error) && error.response && error.response.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
+
+        if (!isRefreshing) {
+          isRefreshing = true;
+          try {
+            const isServer = typeof window === 'undefined';
+
+            if (isServer) {
+              const token = await serverRefreshToken();
+              originalRequest.headers['Cookie'] = `access_token=${token.accessToken};`;
+            } else {
+              await clientRefreshToken();
             }
 
+            isRefreshing = false;
+
+            refreshAndRetryQueue.forEach(({ config, resolve, reject }) => {
+              axiosInstance
+                .request(config)
+                .then((response) => resolve(response))
+                .catch((err) => reject(err));
+            });
+
+            refreshAndRetryQueue.length = 0;
+
+            return axiosInstance(originalRequest);
+          } catch (refreshError) {
+            isRefreshing = false;
+
+            refreshAndRetryQueue.forEach(({ reject }) => reject(refreshError));
+            refreshAndRetryQueue.length = 0;
+
             return Promise.reject(error);
+          }
         }
-    )
+
+        return new Promise<void>((resolve, reject) => {
+          refreshAndRetryQueue.push({
+            config: originalRequest,
+            resolve: (response) => {
+              originalRequest._retry = false;
+              resolve(response);
+            },
+            reject: (error) => {
+              originalRequest._retry = false;
+              reject(error);
+            },
+          });
+        });
+      }
+
+      return Promise.reject(error);
+    }
+  );
 };
+
+
+// axiosInstance.interceptors.response.use(
+//     reponse => reponse,
+//     async error => {
+//         const originalRequest = error.config;
+
+
+//         if (!axios.isCancel(error) && error.response.status === 401 && !originalRequest._retry) {
+//             originalRequest._retry = true;
+//             originalRequest.sent = true;
+
+//             try {
+//                 const cookies = originalRequest.headers['Cookie'];
+//                 await refreshToken(cookies);
+
+//                 // Retry all requests in the queue with the new cookies
+//                 refreshAndRetryQueue.forEach(({ config, resolve, reject }) => {
+//                     axiosInstance
+//                         .request(config)
+//                         .then((response) => resolve(response))
+//                         .catch((err) => reject(err));
+//                 });
+
+//                 // Clear the Queue
+//                 refreshAndRetryQueue.length = 0;
+
+//                 // Retry original request
+//                 return axiosInstance(originalRequest);
+//             } catch (error) {
+//                 handleRefreshTokenError();
+//                 return Promise.reject(error);
+//             }
+//         }
+
+//         return Promise.reject(error);
+//     }
+// )

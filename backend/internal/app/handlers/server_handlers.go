@@ -52,3 +52,30 @@ func (s *ServerHandler) CreateServer(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Server created successfully", "server": server})
 }
+
+func (s *ServerHandler) GetServers(c *gin.Context) {
+	profileIDInterface, exists := c.Get("profile_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "profile_id not found"})
+		return
+	}
+
+	profileIDString, ok := profileIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID format"})
+		return
+	}
+
+	profileID, err := uuid.Parse(profileIDString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+		return
+	}
+
+	servers, err := s.ServerService.GetServers(profileID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting servers: " + err.Error()})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Get servers successfully", "servers": servers})
+}
