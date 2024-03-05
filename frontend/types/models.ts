@@ -11,9 +11,9 @@ export interface Profile {
 }
 
 export enum MemberRole {
-    ADMIN,
-    MODERATOR,
-    GUEST
+    ADMIN = "ADMIN",
+    MODERATOR = "MODERATOR",
+    GUEST = "GUEST"
 }
 
 export interface Member {
@@ -32,9 +32,9 @@ export interface Member {
 }
 
 export enum ChannelType {
-    TEXT,
-    AUDIO,
-    VIDEO
+    TEXT = "TEXT",
+    AUDIO = "AUDIO",
+    VIDEO = "VIDEO"
 }
 
 export interface Channel {

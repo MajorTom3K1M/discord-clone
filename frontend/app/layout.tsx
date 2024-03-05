@@ -1,9 +1,11 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Open_Sans } from 'next/font/google';
+
 import { cn } from '@/lib/utils';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import { ModalProvider } from '@/components/providers/ModalProvider';
 
 const inter = Open_Sans({ subsets: ['latin'] })
 
@@ -25,16 +27,17 @@ export default function RootLayout({
           "bg-white dark:bg-[#313338]"
         )}
       >
-        <ThemeProvider
-          attribute='class'
-          defaultTheme='dark'
-          enableSystem={false}
-          storageKey='discord-theme'
-        >
-          <AuthProvider>
+        <AuthProvider>
+          <ThemeProvider
+            attribute='class'
+            defaultTheme='dark'
+            enableSystem={false}
+            storageKey='discord-theme'
+          >
+            <ModalProvider />
             {children}
-          </AuthProvider>
-        </ThemeProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   )
