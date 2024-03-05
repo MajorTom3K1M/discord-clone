@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 func ConnectToDB() (*gorm.DB, error) {
@@ -21,7 +23,16 @@ func ConnectToDB() (*gorm.DB, error) {
 		os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"), os.Getenv("DB_NAME"))
 
-	db, err := gorm.Open(postgres.Open(psqlInfo), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(psqlInfo), &gorm.Config{
+		Logger: logger.New(
+			log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer(stdout)
+			logger.Config{
+				SlowThreshold: time.Second, // Slow SQL threshold
+				LogLevel:      logger.Info, // Log level
+				Colorful:      true,        // Disable color
+			},
+		),
+	})
 
 	if err != nil {
 		return nil, err
