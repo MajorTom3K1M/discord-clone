@@ -75,3 +75,19 @@ func (s *ServerService) GetServer(profileID uuid.UUID, serverID uuid.UUID) (*mod
 
 	return &server, nil
 }
+
+func (s *ServerService) GetServerDetails(profileID uuid.UUID, serverID uuid.UUID) (*models.Server, error) {
+	var server models.Server
+
+	err := s.DB.Preload("Members", func(db *gorm.DB) *gorm.DB {
+		return db.Order("members.role ASC").Preload("Profile")
+	}).Preload("Channels", func(db *gorm.DB) *gorm.DB {
+		return db.Order("channels.created_at ASC")
+	}).Where("id = ? AND profile_id = ?", serverID, profileID).First(&server).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &server, nil
+}
