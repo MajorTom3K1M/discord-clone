@@ -62,7 +62,7 @@ func (p *ProfileService) CreateProfile(profile *models.Profile) error {
 
 func (p *ProfileService) Authenticate(email, password string) (*models.ProfileResponse, error) {
 	var profile models.Profile
-	if err := p.DB.Where("email = ?", email).First(&profile).Error; err != nil {
+	if err := p.DB.Preload("Servers").Where("email = ?", email).First(&profile).Error; err != nil {
 		return nil, err
 	}
 

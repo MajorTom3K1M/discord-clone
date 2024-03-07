@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type ServerHandler struct {
@@ -146,4 +147,45 @@ func (s *ServerHandler) GetServerDetails(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Get server successfully", "server": server})
+}
+
+func (s *ServerHandler) UpdateServerInviteCode(c *gin.Context) {
+	profileIDInterface, exists := c.Get("profile_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "profile_id not found"})
+		return
+	}
+
+	profileIDString, ok := profileIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID format"})
+		return
+	}
+
+	profileID, err := uuid.Parse(profileIDString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+		return
+	}
+
+	paramServerID := c.Param("serverId")
+	serverID, err := uuid.Parse(paramServerID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Server UUID format"})
+		return
+	}
+
+	server, err := s.ServerService.UpdateServerInviteCode(serverID, profileID)
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Server not found"})
+			return
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update server invite code"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Server invite code updated successfully", "server": server})
 }

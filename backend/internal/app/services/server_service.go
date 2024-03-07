@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type ServerService struct {
@@ -87,6 +88,25 @@ func (s *ServerService) GetServerDetails(profileID uuid.UUID, serverID uuid.UUID
 
 	if err != nil {
 		return nil, err
+	}
+
+	return &server, nil
+}
+
+func (s *ServerService) UpdateServerInviteCode(serverID uuid.UUID, profileID uuid.UUID) (*models.Server, error) {
+	var server models.Server
+	newInviteCode := uuid.New().String()
+
+	result := s.DB.Model(&models.Server{}).Clauses(clause.Returning{}).
+		Where("id = ? AND profile_id = ?", serverID, profileID).
+		Update("invite_code", newInviteCode).Scan(&server)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
 	}
 
 	return &server, nil

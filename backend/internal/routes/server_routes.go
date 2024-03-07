@@ -12,6 +12,7 @@ func ServerRoutes(protected *gin.RouterGroup, serverHandler *handlers.ServerHand
 		serverGroup.POST("", serverHandler.CreateServer)
 		serverGroup.GET("/:serverId", serverHandler.GetServer)
 		serverGroup.GET("/:serverId/details", serverHandler.GetServerDetails)
+		serverGroup.PATCH("/:serverId/invite-code", serverHandler.UpdateServerInviteCode)
 	}
 
 	serversGroup := protected.Group("/servers")
