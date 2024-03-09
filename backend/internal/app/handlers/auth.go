@@ -23,13 +23,26 @@ func NewAuthHandler(profileService *services.ProfileService, tokenService *servi
 }
 
 func (h *AuthHandler) SignUp(c *gin.Context) {
-	var profile models.Profile
+	// var profile models.Profile
+	var profile struct {
+		Name     string `json:"name"`
+		ImageURL string `json:"imageUrl"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
 	if err := c.ShouldBindJSON(&profile); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.ProfileService.CreateProfile(&profile); err != nil {
+	newProfile := models.Profile{
+		Name:     profile.Name,
+		ImageURL: profile.ImageURL,
+		Email:    profile.Email,
+		Password: profile.Password,
+	}
+
+	if err := h.ProfileService.CreateProfile(&newProfile); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
