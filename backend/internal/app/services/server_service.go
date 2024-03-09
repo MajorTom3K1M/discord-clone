@@ -84,7 +84,8 @@ func (s *ServerService) GetServerDetails(profileID uuid.UUID, serverID uuid.UUID
 		return db.Order("members.role ASC").Preload("Profile")
 	}).Preload("Channels", func(db *gorm.DB) *gorm.DB {
 		return db.Order("channels.created_at ASC")
-	}).Where("id = ? AND profile_id = ?", serverID, profileID).First(&server).Error
+	}).Joins("JOIN members ON members.server_id = servers.id").
+		Where("servers.id = ? AND members.profile_id = ?", serverID, profileID).First(&server).Error
 
 	if err != nil {
 		return nil, err
@@ -107,6 +108,39 @@ func (s *ServerService) UpdateServerInviteCode(serverID uuid.UUID, profileID uui
 
 	if result.RowsAffected == 0 {
 		return nil, gorm.ErrRecordNotFound
+	}
+
+	return &server, nil
+}
+
+func (s *ServerService) GetServerByInviteCode(inviteCode uuid.UUID, profileID uuid.UUID) (*models.Server, error) {
+	var server models.Server
+
+	err := s.DB.Joins("JOIN members ON members.server_id = servers.id").
+		Where("servers.invite_code = ? AND members.profile_id = ?", inviteCode, profileID).
+		First(&server).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &server, nil
+}
+
+func (s *ServerService) UpdateServerMember(inviteCode uuid.UUID, profileID uuid.UUID) (*models.Server, error) {
+	var server models.Server
+
+	if err := s.DB.Where("invite_code = ?", inviteCode).First(&server).Error; err != nil {
+		return nil, err
+	}
+
+	member := models.Member{
+		ProfileID: profileID,
+		ServerID:  server.ID,
+	}
+
+	if err := s.DB.Create(&member).Error; err != nil {
+		return nil, err
 	}
 
 	return &server, nil
