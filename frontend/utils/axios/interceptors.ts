@@ -6,7 +6,7 @@ import { handleRefreshTokenError } from '@/services/auth/errorHandlers';
 interface RetryQueueItem {
   resolve: (value: any) => void;
   reject: (error: any) => void;
-  config: AxiosRequestConfig;
+  config: AxiosRequestConfig & { headers: { Cookie?: string } };
 }
 
 export const setupInterceptors = (axiosInstance: AxiosInstance) => {
@@ -29,11 +29,13 @@ export const setupInterceptors = (axiosInstance: AxiosInstance) => {
         if (!isRefreshing) {
           isRefreshing = true;
           try {
+            let token: { accessToken?: string } | null;
             const isServer = typeof window === 'undefined';
 
             if (isServer) {
-              const token = await serverRefreshToken();
-              originalRequest.headers['Cookie'] = `access_token=${token.accessToken};`;
+              token = await serverRefreshToken();
+              if(token?.accessToken)
+                originalRequest.headers['Cookie'] = `access_token=${token?.accessToken};`;
             } else {
               await clientRefreshToken();
             }
@@ -41,6 +43,10 @@ export const setupInterceptors = (axiosInstance: AxiosInstance) => {
             isRefreshing = false;
 
             refreshAndRetryQueue.forEach(({ config, resolve, reject }) => {
+              if (token?.accessToken) {
+                const retryRequest: AxiosRequestConfig & { headers: { Cookie?: string } } = config;
+                retryRequest.headers['Cookie'] = `access_token=${token?.accessToken};`;
+              }
               axiosInstance
                 .request(config)
                 .then((response) => resolve(response))
@@ -59,7 +65,7 @@ export const setupInterceptors = (axiosInstance: AxiosInstance) => {
             return Promise.reject(error);
           }
         }
-
+        
         return new Promise<void>((resolve, reject) => {
           refreshAndRetryQueue.push({
             config: originalRequest,
