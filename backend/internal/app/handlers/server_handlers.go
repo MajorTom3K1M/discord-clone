@@ -220,7 +220,7 @@ func (s *ServerHandler) GetServerByInviteCode(c *gin.Context) {
 
 	server, err := s.ServerService.GetServerByInviteCode(inviteCode, profileID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting server: " + err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Server not found: " + err.Error()})
 		return
 	}
 

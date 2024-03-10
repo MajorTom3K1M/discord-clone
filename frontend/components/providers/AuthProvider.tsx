@@ -1,6 +1,6 @@
 "use client"
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { usePathname, useSearchParams, useRouter } from 'next/navigation'; // Corrected import
+import { usePathname, useSearchParams, useRouter, redirect } from 'next/navigation'; // Corrected import
 import axios, { fetchDataWithCancellation, isCancel } from '@/utils/axios';
 
 const publicPages = ['/sign-in', '/sign-up'];
@@ -77,7 +77,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 if(isCancel(error)) {
                     console.log('Request canceled:', error.message);
                 } else if (!isPublicPage) {
-                    router.push(`/sign-in?redirect=${encodeURIComponent(pathname)}`);
+                    if (pathname !== "/") {
+                        router.push(`/sign-in?redirect=${encodeURIComponent(pathname)}`);
+                    } else {
+                        router.push("/sign-in");
+                    }
                 } else {
                     console.error('An error occurred:', error.message);
                 }

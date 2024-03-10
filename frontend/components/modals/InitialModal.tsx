@@ -55,7 +55,9 @@ export const InitialModal = () => {
         setIsMounted(true);
     }, []);
 
-    if (authState.profile?.servers) {
+    console.log({ authState: authState?.profile })
+    if (authState.profile?.servers?.length) {
+        console.log("SHOULD BE REDIRECT")
         const firstServer = authState.profile.servers[0];
         return redirect(`/servers/${firstServer.id}`);
     }
@@ -65,7 +67,7 @@ export const InitialModal = () => {
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         try {
-            await axios.post("/server", values);
+            await axios.post("/servers", values);
 
             form.reset();
             router.refresh();

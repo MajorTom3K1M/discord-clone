@@ -57,7 +57,7 @@ export const CreateServerModal = () => {
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         try {
-            await axios.post("/server", values);
+            await axios.post("/servers", values);
 
             form.reset();
             router.refresh();
