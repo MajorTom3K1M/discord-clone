@@ -10,6 +10,7 @@ func ServerRoutes(protected *gin.RouterGroup, serverHandler *handlers.ServerHand
 	serversGroup := protected.Group("/servers")
 	{
 		serversGroup.GET("", serverHandler.GetServers)
+		serversGroup.GET("/by-profile", serverHandler.GetServerByProfileID)
 		serversGroup.GET("/invite-code/:inviteCode", serverHandler.GetServerByInviteCode)
 		serversGroup.GET("/:serverId", serverHandler.GetServer)
 		serversGroup.GET("/:serverId/details", serverHandler.GetServerDetails)
@@ -17,6 +18,7 @@ func ServerRoutes(protected *gin.RouterGroup, serverHandler *handlers.ServerHand
 		serversGroup.POST("", serverHandler.CreateServer)
 		serversGroup.POST("/invite-code/:inviteCode/members", serverHandler.UpdateServerMember)
 
+		serversGroup.PATCH("/:serverId")
 		serversGroup.PATCH("/:serverId/invite-code", serverHandler.UpdateServerInviteCode)
 	}
 }

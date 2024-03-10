@@ -63,6 +63,19 @@ func (s *ServerService) GetServers(profileID uuid.UUID) ([]models.Server, error)
 	return servers, nil
 }
 
+func (s *ServerService) GetServerByProfileID(profileID uuid.UUID) (*models.Server, error) {
+	var server models.Server
+	err := s.DB.Joins("JOIN members ON members.server_id = servers.id").
+		Where("members.profile_id = ?", profileID).
+		First(&server).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &server, nil
+}
+
 func (s *ServerService) GetServer(profileID uuid.UUID, serverID uuid.UUID) (*models.Server, error) {
 	var server models.Server
 

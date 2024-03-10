@@ -261,3 +261,31 @@ func (s *ServerHandler) UpdateServerMember(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Update server member successfully", "server": server})
 }
+
+func (s *ServerHandler) GetServerByProfileID(c *gin.Context) {
+	profileIDInterface, exists := c.Get("profile_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "profile_id not found"})
+		return
+	}
+
+	profileIDString, ok := profileIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID format"})
+		return
+	}
+
+	profileID, err := uuid.Parse(profileIDString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+		return
+	}
+
+	server, err := s.ServerService.GetServerByProfileID(profileID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error get server by profile id: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Get server successfully", "server": server})
+}
