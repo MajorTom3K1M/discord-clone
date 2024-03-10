@@ -158,3 +158,26 @@ func (s *ServerService) UpdateServerMember(inviteCode uuid.UUID, profileID uuid.
 
 	return &server, nil
 }
+
+func (s *ServerService) UpdateServer(profileID uuid.UUID, serverID uuid.UUID, name string, imageUrl string) (*models.Server, error) {
+	var server models.Server
+
+	updateData := map[string]interface{}{
+		"Name":     name,
+		"ImageUrl": imageUrl,
+	}
+
+	result := s.DB.Model(&models.Server{}).Clauses(clause.Returning{}).
+		Where("id = ? AND profile_id = ?", serverID, profileID).
+		Updates(updateData).Scan(&server)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	return &server, nil
+}
