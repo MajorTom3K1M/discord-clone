@@ -162,9 +162,9 @@ func (s *ServerService) UpdateServerMember(inviteCode uuid.UUID, profileID uuid.
 func (s *ServerService) UpdateServer(profileID uuid.UUID, serverID uuid.UUID, name string, imageUrl string) (*models.Server, error) {
 	var server models.Server
 
-	updateData := map[string]interface{}{
-		"Name":     name,
-		"ImageUrl": imageUrl,
+	updateData := models.Server{
+		Name:     name,
+		ImageURL: imageUrl,
 	}
 
 	result := s.DB.Model(&models.Server{}).Clauses(clause.Returning{}).

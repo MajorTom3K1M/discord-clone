@@ -27,6 +27,10 @@ func (f *Factory) NewServerService() *services.ServerService {
 	return services.NewServerService(f.db)
 }
 
+func (f *Factory) NewMemberService() *services.MemberService {
+	return services.NewMemberService(f.db)
+}
+
 func (f *Factory) NewProfileHandler() *handlers.ProfileHandler {
 	profileService := f.NewProfileService()
 	return handlers.NewProfileHandler(profileService)
@@ -41,4 +45,9 @@ func (f *Factory) NewAuthHandler() *handlers.AuthHandler {
 func (f *Factory) NewServerHandler() *handlers.ServerHandler {
 	serverService := f.NewServerService()
 	return handlers.NewServerHandler(serverService)
+}
+
+func (f *Factory) NewMemberHandler() *handlers.MemberHandler {
+	memberService := f.NewMemberService()
+	return handlers.NewMemberHandler(memberService)
 }
