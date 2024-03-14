@@ -6,8 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { redirect, useRouter } from "next/navigation";
 
 import { useAuth } from '@/components/providers/AuthProvider';
-import { useEffect, useState } from "react";
 import { useForm } from 'react-hook-form';
+import { useEffect } from 'react';
 
 import {
     Dialog,
@@ -28,6 +28,7 @@ import {
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { FileUpload } from '@/components/FileUpload';
+import { useModal } from '@/hooks/useModalStore';
 
 const formSchema = z.object({
     name: z.string().min(1, {
@@ -38,10 +39,12 @@ const formSchema = z.object({
     })
 })
 
-export const InitialModal = () => {
-    const { authState } = useAuth();
-    const [isMounted, setIsMounted] = useState(false);
+export const EditServerModal = () => {
+    const { isOpen, onClose, type, data } = useModal();
+
     const router = useRouter();
+    const isModalOpen = isOpen && type === "editServer";
+    const { server } = data;
 
     const form = useForm({
         resolver: zodResolver(formSchema),
@@ -52,37 +55,34 @@ export const InitialModal = () => {
     });
 
     useEffect(() => {
-        setIsMounted(true);
-    }, []);
-
-    // console.log({ authState: authState?.profile })
-    // if (authState.profile?.servers?.length) {
-    //     console.log("SHOULD BE REDIRECT")
-    //     const firstServer = authState.profile.servers[0];
-    //     return redirect(`/servers/${firstServer.id}`);
-    // }
-
+        if (server) {
+            console.log("set values in form setting modals : ", server.name, server.imageUrl)
+            form.setValue("name", server.name);
+            form.setValue("imageUrl", server.imageUrl);
+        }
+    }, [server, form]);
 
     const isLoading = form.formState.isSubmitting;
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         try {
-            await axios.post("/servers", values);
+            await axios.patch(`/servers/${server?.id}`, values);
 
             form.reset();
             router.refresh();
-            window.location.reload();
+            onClose();
         } catch (error) {
             console.log(error);
         }
     };
 
-    if (!isMounted) {
-        return null;
-    }
+    const handleClose = () => {
+        // form.reset();
+        onClose();
+    };
 
     return (
-        <Dialog open>
+        <Dialog open={isModalOpen} onOpenChange={handleClose}>
             <DialogContent className='bg-white text-black p-0 overflow-hidden'>
                 <DialogHeader className='pt-8 px-6'>
                     <DialogTitle className='text-2xl text-center font-bold'>
@@ -113,7 +113,7 @@ export const InitialModal = () => {
                                 />
                             </div>
 
-                            <FormField 
+                            <FormField
                                 control={form.control}
                                 name='name'
                                 render={({ field }) => (
@@ -124,7 +124,7 @@ export const InitialModal = () => {
                                             Server name
                                         </FormLabel>
                                         <FormControl>
-                                            <Input 
+                                            <Input
                                                 disabled={isLoading}
                                                 className='bg-zinc-300/50 border-0 focus-visible:ring-0 text-black focus-visible:ring-offset-0'
                                                 placeholder='Enter server name'
@@ -138,7 +138,7 @@ export const InitialModal = () => {
                         </div>
                         <DialogFooter className='bg-gray-100 px-6 py-4'>
                             <Button variant='primary' disabled={isLoading}>
-                                Create
+                                Save
                             </Button>
                         </DialogFooter>
                     </form>

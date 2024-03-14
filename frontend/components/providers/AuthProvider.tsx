@@ -82,6 +82,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     } else {
                         router.push("/sign-in");
                     }
+                    router.refresh();
                 } else {
                     console.error('An error occurred:', error.message);
                 }
