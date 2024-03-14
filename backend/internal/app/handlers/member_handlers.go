@@ -79,3 +79,45 @@ func (m *MemberHandler) UpdateMemberRole(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Member role updated successfully", "server": server})
 }
+
+func (m *MemberHandler) KickMember(c *gin.Context) {
+	profileIDInterface, exists := c.Get("profile_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "profile_id not found"})
+		return
+	}
+
+	profileIDString, ok := profileIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID format"})
+		return
+	}
+
+	profileID, err := uuid.Parse(profileIDString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+		return
+	}
+
+	paramServerID := c.Param("serverId")
+	serverID, err := uuid.Parse(paramServerID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Server UUID format"})
+		return
+	}
+
+	paramMemberID := c.Param("memberId")
+	memberID, err := uuid.Parse(paramMemberID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Member UUID format"})
+		return
+	}
+
+	server, err := m.MemberService.KickMember(serverID, profileID, memberID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Delete member successfully", "server": server})
+}
