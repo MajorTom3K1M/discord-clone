@@ -45,7 +45,7 @@ func (h *ChannelHandler) CreateChannel(c *gin.Context) {
 
 	var channelData struct {
 		Name        string             `json:"name"`
-		ChannelType models.ChannelType `json:"channelType"`
+		ChannelType models.ChannelType `json:"type"`
 	}
 	if err := c.ShouldBindJSON(&channelData); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
