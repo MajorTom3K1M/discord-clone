@@ -12,6 +12,7 @@ func SetupRoutes(router *gin.Engine, f *factory.Factory) {
 	authHandler := f.NewAuthHandler()
 	serverHandler := f.NewServerHandler()
 	memberHandler := f.NewMemberHandler()
+	channelHandler := f.NewChannelHandler()
 
 	AuthRoutes(router, authHandler)
 
@@ -22,4 +23,5 @@ func SetupRoutes(router *gin.Engine, f *factory.Factory) {
 	ProfileRoutes(protected, profileHandler)
 	ServerRoutes(protected, serverHandler)
 	MemberRoutes(protected, memberHandler)
+	ChannelRoutes(protected, channelHandler)
 }
