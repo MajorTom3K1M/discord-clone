@@ -21,5 +21,7 @@ func ServerRoutes(protected *gin.RouterGroup, serverHandler *handlers.ServerHand
 		serversGroup.PATCH("/:serverId", serverHandler.UpdateServer)
 		serversGroup.PATCH("/:serverId/leave", serverHandler.LeaveServer)
 		serversGroup.PATCH("/:serverId/invite-code", serverHandler.UpdateServerInviteCode)
+
+		serversGroup.DELETE("/:serverId", serverHandler.DeleteServer)
 	}
 }

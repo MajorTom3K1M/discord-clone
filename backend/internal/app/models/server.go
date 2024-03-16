@@ -15,8 +15,8 @@ type Server struct {
 	InviteCode string    `gorm:"unique;" json:"inviteCode"`
 	ProfileID  uuid.UUID `json:"profileID"`
 	Profile    Profile   `gorm:"foreignKey:ProfileID;references:ID;onDelete:CASCADE" json:"profile,omitempty"`
-	Members    []Member  `gorm:"foreignKey:ServerID" json:"members,omitempty"`
-	Channels   []Channel `gorm:"foreignKey:ServerID" json:"channels,omitempty"`
+	Members    []Member  `gorm:"foreignKey:ServerID;onDelete:CASCADE" json:"members,omitempty"`
+	Channels   []Channel `gorm:"foreignKey:ServerID;onDelete:CASCADE" json:"channels,omitempty"`
 	CreatedAt  time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }

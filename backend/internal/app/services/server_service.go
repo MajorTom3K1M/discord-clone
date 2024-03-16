@@ -215,3 +215,12 @@ func (s *ServerService) LeaveServer(profileID, serverID uuid.UUID) (*models.Serv
 
 	return &updatedServer, nil
 }
+
+func (s *ServerService) DeleteServer(profileID, serverID uuid.UUID) error {
+	if err := s.DB.Where("id = ? AND profile_id = ?", serverID, profileID).
+		Delete(&models.Server{}).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
