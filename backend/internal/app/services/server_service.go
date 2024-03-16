@@ -181,3 +181,37 @@ func (s *ServerService) UpdateServer(profileID uuid.UUID, serverID uuid.UUID, na
 
 	return &server, nil
 }
+
+func (s *ServerService) LeaveServer(profileID, serverID uuid.UUID) (*models.Server, error) {
+
+	err := s.DB.Transaction(func(tx *gorm.DB) error {
+		var server models.Server
+		// Step 1: Verify the server that have a this member and not admin
+		if err := tx.Preload("Members", "profile_id = ?", profileID).
+			Where("servers.id = ? AND servers.profile_id <> ?", serverID, profileID).
+			First(&server).Error; err != nil {
+			return err
+		}
+
+		// Step 2: Delete members with the specific profileId
+		if err := tx.Where("server_id = ? AND profile_id = ?", serverID, profileID).
+			Delete(&models.Member{}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var updatedServer models.Server
+	if err := s.DB.Preload("Members", func(db *gorm.DB) *gorm.DB {
+		return db.Order("role ASC").Preload("Profile")
+	}).First(&updatedServer, serverID).Error; err != nil {
+		return nil, err
+	}
+
+	return &updatedServer, nil
+}

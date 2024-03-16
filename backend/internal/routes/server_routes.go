@@ -19,6 +19,7 @@ func ServerRoutes(protected *gin.RouterGroup, serverHandler *handlers.ServerHand
 		serversGroup.POST("/invite-code/:inviteCode/members", serverHandler.UpdateServerMember)
 
 		serversGroup.PATCH("/:serverId", serverHandler.UpdateServer)
+		serversGroup.PATCH("/:serverId/leave", serverHandler.LeaveServer)
 		serversGroup.PATCH("/:serverId/invite-code", serverHandler.UpdateServerInviteCode)
 	}
 }
