@@ -10,5 +10,7 @@ func ChannelRoutes(protected *gin.RouterGroup, channelHandler *handlers.ChannelH
 	channelGroup := protected.Group("/channels")
 	{
 		channelGroup.POST("/servers/:serverId", channelHandler.CreateChannel)
+
+		channelGroup.DELETE("/:channelId/servers/:serverId", channelHandler.DeleteChannel)
 	}
 }
