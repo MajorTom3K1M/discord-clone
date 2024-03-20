@@ -120,3 +120,51 @@ func (h *ChannelHandler) DeleteChannel(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Channel delete successfully", "server": server})
 }
+
+func (h *ChannelHandler) UpdateChannel(c *gin.Context) {
+	profileIDInterface, exists := c.Get("profile_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "profile_id not found"})
+		return
+	}
+
+	profileIDString, ok := profileIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID format"})
+		return
+	}
+
+	profileID, err := uuid.Parse(profileIDString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+		return
+	}
+
+	paramServerID := c.Param("serverId")
+	serverID, err := uuid.Parse(paramServerID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Server UUID format"})
+		return
+	}
+
+	paramChannelID := c.Param("channelId")
+	channelID, err := uuid.Parse(paramChannelID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Channel UUID format"})
+		return
+	}
+
+	var updateData models.Channel
+	if err := c.ShouldBindJSON(&updateData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	server, err := h.ChannelService.UpdateChannel(serverID, profileID, channelID, updateData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Channel updated successfully", "server": server})
+}
