@@ -224,3 +224,19 @@ func (s *ServerService) DeleteServer(profileID, serverID uuid.UUID) error {
 
 	return nil
 }
+
+func (s *ServerService) GetServerDefaultChannel(profileID, serverID uuid.UUID) (*models.Server, error) {
+	var server models.Server
+
+	err := s.DB.Preload("Channels", func(db *gorm.DB) *gorm.DB {
+		return db.Where("name = ?", "general").Order("created_at DESC")
+	}).Joins("JOIN members ON members.server_id = servers.id").
+		Where("servers.id = ? AND members.profile_id = ?", serverID, profileID).
+		First(&server).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &server, nil
+}

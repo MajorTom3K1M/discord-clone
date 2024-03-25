@@ -14,6 +14,7 @@ func ServerRoutes(protected *gin.RouterGroup, serverHandler *handlers.ServerHand
 		serversGroup.GET("/invite-code/:inviteCode", serverHandler.GetServerByInviteCode)
 		serversGroup.GET("/:serverId", serverHandler.GetServer)
 		serversGroup.GET("/:serverId/details", serverHandler.GetServerDetails)
+		serversGroup.GET("/:serverId/channels/default", serverHandler.GetServerDefaultChannel)
 
 		serversGroup.POST("", serverHandler.CreateServer)
 		serversGroup.POST("/invite-code/:inviteCode/members", serverHandler.UpdateServerMember)
