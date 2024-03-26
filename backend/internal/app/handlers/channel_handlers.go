@@ -168,3 +168,20 @@ func (h *ChannelHandler) UpdateChannel(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Channel updated successfully", "server": server})
 }
+
+func (h *ChannelHandler) GetChannel(c *gin.Context) {
+	paramChannelID := c.Param("channelId")
+	channelID, err := uuid.Parse(paramChannelID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Server UUID format"})
+		return
+	}
+
+	channel, err := h.ChannelService.GetChannel(channelID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Get channel successfully", "channel": channel})
+}

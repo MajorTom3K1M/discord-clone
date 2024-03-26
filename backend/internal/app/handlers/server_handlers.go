@@ -447,3 +447,38 @@ func (s *ServerHandler) GetServerDefaultChannel(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Get server successfully", "server": server})
 }
+
+func (s *ServerHandler) GetMember(c *gin.Context) {
+	profileIDInterface, exists := c.Get("profile_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "profile_id not found"})
+		return
+	}
+
+	profileIDString, ok := profileIDInterface.(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID format"})
+		return
+	}
+
+	profileID, err := uuid.Parse(profileIDString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+		return
+	}
+
+	paramServerID := c.Param("serverId")
+	serverID, err := uuid.Parse(paramServerID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Member UUID format"})
+		return
+	}
+
+	member, err := s.ServerService.GetMember(serverID, profileID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Get member successfully", "member": member})
+}

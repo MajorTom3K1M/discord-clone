@@ -9,6 +9,8 @@ import (
 func ChannelRoutes(protected *gin.RouterGroup, channelHandler *handlers.ChannelHandler) {
 	channelGroup := protected.Group("/channels")
 	{
+		channelGroup.GET("/:channelId", channelHandler.GetChannel)
+
 		channelGroup.POST("/servers/:serverId", channelHandler.CreateChannel)
 		channelGroup.POST("/:channelId/servers/:serverId", channelHandler.UpdateChannel)
 

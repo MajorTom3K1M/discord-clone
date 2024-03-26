@@ -13,6 +13,7 @@ func ServerRoutes(protected *gin.RouterGroup, serverHandler *handlers.ServerHand
 		serversGroup.GET("/by-profile", serverHandler.GetServerByProfileID)
 		serversGroup.GET("/invite-code/:inviteCode", serverHandler.GetServerByInviteCode)
 		serversGroup.GET("/:serverId", serverHandler.GetServer)
+		serversGroup.GET("/:serverId/members", serverHandler.GetMember)
 		serversGroup.GET("/:serverId/details", serverHandler.GetServerDetails)
 		serversGroup.GET("/:serverId/channels/default", serverHandler.GetServerDefaultChannel)
 

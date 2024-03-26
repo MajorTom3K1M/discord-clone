@@ -135,3 +135,13 @@ func (c *ChannelService) UpdateChannel(serverID, profileID, channelID uuid.UUID,
 
 	return &updatedServer, nil
 }
+
+func (c *ChannelService) GetChannel(channelID uuid.UUID) (*models.Channel, error) {
+	var channel models.Channel
+
+	if err := c.DB.First(&channel, "id = ?", channelID).Error; err != nil {
+		return nil, err
+	}
+
+	return &channel, nil
+}

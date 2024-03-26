@@ -240,3 +240,13 @@ func (s *ServerService) GetServerDefaultChannel(profileID, serverID uuid.UUID) (
 
 	return &server, nil
 }
+
+func (s *ServerService) GetMember(serverID, profileID uuid.UUID) (*models.Member, error) {
+	var member models.Member
+	if err := s.DB.First(&member, "server_id = ? AND profile_id = ?", serverID, profileID).
+		Error; err != nil {
+		return nil, err
+	}
+
+	return &member, nil
+}
