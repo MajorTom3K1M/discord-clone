@@ -70,3 +70,13 @@ func (m *MemberService) KickMember(serverID uuid.UUID, profileID uuid.UUID, memb
 
 	return &updatedServer, nil
 }
+
+func (m *MemberService) GetMember(serverID, profileID uuid.UUID) (*models.Member, error) {
+	var member models.Member
+	if err := m.DB.Preload("Profile").Where("server_id = ? AND profile_id = ?", serverID, profileID).
+		First(&member).Error; err != nil {
+		return nil, err
+	}
+
+	return &member, nil
+}

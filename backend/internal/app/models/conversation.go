@@ -8,14 +8,14 @@ import (
 )
 
 type Conversation struct {
-	ID             uuid.UUID `gorm:"type:uuid;primary_key;"`
-	MemberOneID    uuid.UUID `gorm:"index:,unique"`
-	MemberOne      Member    `gorm:"foreignKey:MemberOneID;references:ID;onDelete:CASCADE"`
-	MemberTwoID    uuid.UUID `gorm:"index:,unique;index"`
-	MemberTwo      Member    `gorm:"foreignKey:MemberTwoID;references:ID;onDelete:CASCADE"`
-	DirectMessages []DirectMessage
-	CreatedAt      time.Time `gorm:"default:CURRENT_TIMESTAMP"`
-	UpdatedAt      time.Time
+	ID             uuid.UUID       `gorm:"type:uuid;primary_key;" json:"id"`
+	MemberOneID    uuid.UUID       `gorm:"index:,unique" json:"memberOneID"`
+	MemberOne      Member          `gorm:"foreignKey:MemberOneID;references:ID;onDelete:CASCADE" json:"memberOne"`
+	MemberTwoID    uuid.UUID       `gorm:"index:,unique;index" json:"memberTwoID"`
+	MemberTwo      Member          `gorm:"foreignKey:MemberTwoID;references:ID;onDelete:CASCADE" json:"memberTwo"`
+	DirectMessages []DirectMessage `json:"directMessages"`
+	CreatedAt      time.Time       `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
 }
 
 func (conversation *Conversation) BeforeCreate(tx *gorm.DB) (err error) {
