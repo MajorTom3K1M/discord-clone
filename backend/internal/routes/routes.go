@@ -14,6 +14,7 @@ func SetupRoutes(router *gin.Engine, f *factory.Factory) {
 	memberHandler := f.NewMemberHandler()
 	channelHandler := f.NewChannelHandler()
 	converstaionHandler := f.NewConversationHandler()
+	// socketServer := f.NewSocketServer()
 
 	AuthRoutes(router, authHandler)
 
@@ -21,6 +22,7 @@ func SetupRoutes(router *gin.Engine, f *factory.Factory) {
 	protected := router.Group("/")
 	protected.Use(middleware.AuthMiddleware)
 
+	SocketRoutes(protected)
 	ProfileRoutes(protected, profileHandler)
 	ServerRoutes(protected, serverHandler)
 	MemberRoutes(protected, memberHandler)
