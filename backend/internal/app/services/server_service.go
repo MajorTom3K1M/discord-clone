@@ -79,7 +79,7 @@ func (s *ServerService) GetServerByProfileID(profileID uuid.UUID) (*models.Serve
 func (s *ServerService) GetServer(profileID uuid.UUID, serverID uuid.UUID) (*models.Server, error) {
 	var server models.Server
 
-	err := s.DB.Joins("JOIN members ON members.server_id = servers.id").
+	err := s.DB.Preload("Members").Joins("JOIN members ON members.server_id = servers.id").
 		Where("servers.id = ? AND members.profile_id = ?", serverID, profileID).
 		First(&server).Error
 

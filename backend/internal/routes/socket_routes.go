@@ -7,9 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SocketRoutes(router *gin.RouterGroup) {
+func SocketRoutes(router *gin.RouterGroup, socketHandler *handlers.WebsocketHandler) {
 	wsHub := websocket.NewHub()
 	go wsHub.Run()
 
 	router.GET("/ws", handlers.WebSocketHandler(wsHub))
+	router.POST("/ws/messages", socketHandler.WebSocketMessageHandler(wsHub))
 }

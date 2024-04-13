@@ -15,10 +15,14 @@ type Client struct {
 	ID   string
 }
 
+type Content struct {
+	Message string `json:"message"`
+	FileUrl string `json:"fileUrl"`
+}
 type Message struct {
-	Type    string `json:"type"`              // e.g., "chat", "subscribe", "unsubscribe"
-	Channel string `json:"channel,omitempty"` // Channel or conversation ID
-	Content string `json:"content,omitempty"` // Actual message content
+	Type    string  `json:"type"`              // e.g., "chat", "subscribe", "unsubscribe"
+	Channel string  `json:"channel,omitempty"` // Channel or conversation ID
+	Content Content `json:"content,omitempty"` // Actual message content
 }
 
 const (

@@ -39,6 +39,10 @@ func (f *Factory) NewConversationService() *services.ConversationService {
 	return services.NewConversationService(f.db)
 }
 
+func (f *Factory) NewMessageService() *services.MessageService {
+	return services.NewMessageService(f.db)
+}
+
 func (f *Factory) NewProfileHandler() *handlers.ProfileHandler {
 	profileService := f.NewProfileService()
 	return handlers.NewProfileHandler(profileService)
@@ -68,4 +72,11 @@ func (f *Factory) NewChannelHandler() *handlers.ChannelHandler {
 func (f *Factory) NewConversationHandler() *handlers.ConversationHandler {
 	conversationService := f.NewConversationService()
 	return handlers.NewConversationHandler(conversationService)
+}
+
+func (f *Factory) NewWebsocketHandler() *handlers.WebsocketHandler {
+	serverService := f.NewServerService()
+	channelService := f.NewChannelService()
+	messageService := f.NewMessageService()
+	return handlers.NewWebsocketHandler(serverService, channelService, messageService)
 }
