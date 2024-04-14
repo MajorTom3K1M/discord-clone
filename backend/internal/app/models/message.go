@@ -17,7 +17,7 @@ type Message struct {
 	Channel   Channel   `gorm:"foreignKey:ChannelID;references:ID;onDelete:CASCADE" json:"channel"`
 	Deleted   bool      `gorm:"default:false" json:"deleted"`
 	CreatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
 
 func (message *Message) BeforeCreate(tx *gorm.DB) (err error) {

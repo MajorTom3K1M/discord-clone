@@ -80,3 +80,8 @@ func (f *Factory) NewWebsocketHandler() *handlers.WebsocketHandler {
 	messageService := f.NewMessageService()
 	return handlers.NewWebsocketHandler(serverService, channelService, messageService)
 }
+
+func (f *Factory) NewMessageHandler() *handlers.MessageHandler {
+	messageService := f.NewMessageService()
+	return handlers.NewMessageHandler(messageService)
+}
