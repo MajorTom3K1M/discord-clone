@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"discord-backend/internal/app/models"
 	"encoding/json"
 	"log"
 	"time"
@@ -20,9 +21,9 @@ type Content struct {
 	FileUrl string `json:"fileUrl"`
 }
 type Message struct {
-	Type    string  `json:"type"`              // e.g., "chat", "subscribe", "unsubscribe"
-	Channel string  `json:"channel,omitempty"` // Channel or conversation ID
-	Content Content `json:"content,omitempty"` // Actual message content
+	Type    string         `json:"type"`              // e.g., "chat", "subscribe", "unsubscribe"
+	Channel string         `json:"channel,omitempty"` // Channel or conversation ID
+	Content models.Message `json:"content,omitempty"` // Actual message content
 }
 
 const (

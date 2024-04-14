@@ -135,18 +135,238 @@ func (h *WebsocketHandler) WebSocketMessageHandler(hub *ws.Hub) gin.HandlerFunc 
 		}
 
 		channelKey := fmt.Sprintf("chat:%s:messages", channelIDStr)
-		fmt.Println(channelKey)
 		msg := ws.Message{
 			Type:    "message",
 			Channel: channelKey,
-			Content: ws.Content{
-				Message: message.Content,
-				FileUrl: *message.FileURL,
-			},
+			Content: *message,
 		}
 		hub.BroadcastToChannel(msg)
 
 		c.JSON(http.StatusOK, gin.H{"message": "Message created successfully", "data": message})
+	}
+}
+
+func (h *WebsocketHandler) WebScoketEditMessageHandler(hub *ws.Hub) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		paramMessageID := c.Param("messageId")
+		messageID, err := uuid.Parse(paramMessageID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Server UUID format"})
+			return
+		}
+
+		serverIDStr := c.Query("serverId")
+		channelIDStr := c.Query("channelId")
+		if serverIDStr == "" || channelIDStr == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Missing serverId or channelId"})
+			return
+		}
+
+		serverID, err := uuid.Parse(serverIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid serverId"})
+			return
+		}
+
+		channelID, err := uuid.Parse(channelIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channelId"})
+			return
+		}
+
+		profileIDInterface, exists := c.Get("profile_id")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "profile_id not found"})
+			return
+		}
+
+		profileIDStr, ok := profileIDInterface.(string)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID format"})
+			return
+		}
+
+		profileID, err := uuid.Parse(profileIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+			return
+		}
+
+		server, err := h.ServerService.GetServer(profileID, serverID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Server not found"})
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting server: " + err.Error()})
+			return
+		}
+
+		_, err = h.ChannelService.GetChannel(channelID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting channel: " + err.Error()})
+			return
+		}
+
+		member, err := FindMember(server.Members, profileID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Member not found"})
+			return
+		}
+
+		message, err := h.MessageService.GetMessage(channelID, messageID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Member not found"})
+			return
+		}
+
+		isMessageOwner := message.MemberID == member.ID
+		// isAdmin := member.Role == models.Admin
+		// isModerator := member.Role == models.Moderator
+		// canModify := isMessageOwner || isAdmin || isModerator
+
+		var input struct {
+			Content string `json:"content"`
+		}
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+			return
+		}
+
+		if !isMessageOwner {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		message, err = h.MessageService.UpdateMessage(channelID, messageID, input.Content)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating message: " + err.Error()})
+			return
+		}
+
+		channelKey := fmt.Sprintf("chat:%s:messages:update", channelIDStr)
+		msg := ws.Message{
+			Type:    "message",
+			Channel: channelKey,
+			Content: *message,
+		}
+		hub.BroadcastToChannel(msg)
+
+		c.JSON(http.StatusOK, gin.H{"message": "Message updated successfully", "data": message})
+	}
+}
+
+func (h *WebsocketHandler) WebScoketDeleteMessageHandler(hub *ws.Hub) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		paramMessageID := c.Param("messageId")
+		messageID, err := uuid.Parse(paramMessageID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Server UUID format"})
+			return
+		}
+
+		serverIDStr := c.Query("serverId")
+		channelIDStr := c.Query("channelId")
+		if serverIDStr == "" || channelIDStr == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Missing serverId or channelId"})
+			return
+		}
+
+		serverID, err := uuid.Parse(serverIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid serverId"})
+			return
+		}
+
+		channelID, err := uuid.Parse(channelIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid channelId"})
+			return
+		}
+
+		profileIDInterface, exists := c.Get("profile_id")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "profile_id not found"})
+			return
+		}
+
+		profileIDStr, ok := profileIDInterface.(string)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID format"})
+			return
+		}
+
+		profileID, err := uuid.Parse(profileIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+			return
+		}
+
+		server, err := h.ServerService.GetServer(profileID, serverID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Server not found"})
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting server: " + err.Error()})
+			return
+		}
+
+		_, err = h.ChannelService.GetChannel(channelID)
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				c.JSON(http.StatusNotFound, gin.H{"error": "Channel not found"})
+				return
+			}
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting channel: " + err.Error()})
+			return
+		}
+
+		member, err := FindMember(server.Members, profileID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Member not found"})
+			return
+		}
+
+		message, err := h.MessageService.GetMessage(channelID, messageID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Member not found"})
+			return
+		}
+
+		isMessageOwner := message.MemberID == member.ID
+		isAdmin := member.Role == models.Admin
+		isModerator := member.Role == models.Moderator
+		canModify := isMessageOwner || isAdmin || isModerator
+
+		if !canModify {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		message, err = h.MessageService.DeleteMessage(channelID, messageID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error updating message: " + err.Error()})
+			return
+		}
+
+		channelKey := fmt.Sprintf("chat:%s:messages:update", channelIDStr)
+		msg := ws.Message{
+			Type:    "message",
+			Channel: channelKey,
+			Content: *message,
+		}
+		hub.BroadcastToChannel(msg)
+
+		c.JSON(http.StatusOK, gin.H{"message": "Message deleted successfully", "data": message})
 	}
 }
 
