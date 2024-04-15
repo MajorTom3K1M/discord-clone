@@ -6,8 +6,8 @@ export interface Profile {
     servers?: Server[];
     members?: Member[];
     channels?: Channel[];
-    createdAt: Date;
-    updatedAt: Date;
+    created_at: Date;
+    updated_at: Date;
 }
 
 export enum MemberRole {
@@ -27,8 +27,8 @@ export interface Member {
     directMessages?: DirectMessage[]; // Assuming DirectMessage is another interface you will define
     conversationsInitiated?: Conversation[]; // Assuming Conversation is another interface you will define
     conversationsReceived?: Conversation[]; // Assuming Conversation is another interface you will define
-    createdAt: Date;
-    updatedAt: Date;
+    created_at: Date;
+    updated_at: Date;
 }
 
 export enum ChannelType {
@@ -46,8 +46,8 @@ export interface Channel {
     serverID: string;
     server?: Server; // Made optional to prevent circular reference issues
     messages?: Message[]; // Assuming Message is another interface you will define
-    createdAt: Date;
-    updatedAt: Date;
+    created_at: Date;
+    updated_at: Date;
 }
 
 export interface Server {
@@ -59,8 +59,8 @@ export interface Server {
     profile?: Profile; // Optional, based on "omitempty"
     members?: Member[]; // Optional, based on "omitempty"
     channels?: Channel[]; // Optional, based on "omitempty"
-    createdAt: Date; // Assuming time.Time translates to Date in TypeScript
-    updatedAt: Date;
+    created_at: Date; // Assuming time.Time translates to Date in TypeScript
+    updated_at: Date;
 }
 
 export interface Message {
@@ -68,12 +68,12 @@ export interface Message {
     content: string;
     fileUrl?: string; // Optional because of the pointer type in Go, indicating it can be null
     memberID: string;
-    member?: Member; // Made optional to avoid deep nesting issues during type checking
+    member: Member; // Made optional to avoid deep nesting issues during type checking
     channelID: string;
     channel?: Channel; // Made optional to avoid deep nesting issues during type checking
     deleted: boolean;
-    createdAt: Date;
-    updatedAt: Date;
+    created_at: Date;
+    updated_at: Date;
 }
 
 export interface DirectMessage {
@@ -85,8 +85,8 @@ export interface DirectMessage {
     conversationID: string;
     conversation?: Conversation; // Optional to simplify type structure and usage
     deleted: boolean;
-    createdAt: Date;
-    updatedAt: Date;
+    created_at: Date;
+    updated_at: Date;
 }
 
 export interface Conversation {
@@ -96,6 +96,6 @@ export interface Conversation {
     memberTwoID: string;
     memberTwo?: Member; // Optional to simplify type structure and usage
     directMessages?: DirectMessage[]; // Assuming it can be optional
-    createdAt: Date;
-    updatedAt: Date;
+    created_at: Date;
+    updated_at: Date;
 }

@@ -2,6 +2,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { usePathname, useSearchParams, useRouter, redirect } from 'next/navigation'; // Corrected import
 import axios, { fetchDataWithCancellation, isCancel } from '@/utils/axios';
+import { Loader2 } from 'lucide-react';
 
 const publicPages = ['/sign-in', '/sign-up'];
 
@@ -74,7 +75,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             request.then(response => {
                 setAuthState({ profile: response.data.profile });
             }).catch(error => {
-                if(isCancel(error)) {
+                if (isCancel(error)) {
                     console.log('Request canceled:', error.message);
                 } else if (!isPublicPage) {
                     if (pathname !== "/") {
@@ -93,9 +94,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return () => cancel('Component unmounted: Operation canceled by the user.');
     }, []);
 
+
+
     return (
         <AuthContext.Provider value={{ authState, signin, signout, signup, isPublicPage }}>
-            {authState.profile === null && !isPublicPage ? <>Loading...</> : children}
+            {
+            authState.profile === null && !isPublicPage
+                ? (
+                    <div className="flex flex-col flex-1 justify-center items-center h-full">
+                        <Loader2 className="h-7 w-7 text-zinc-500 animate-spin my-4" />
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                            Loading...
+                        </p>
+                    </div>
+                )
+                : children
+            }
         </AuthContext.Provider>
     )
 };

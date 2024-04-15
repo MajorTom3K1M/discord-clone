@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import { AuthProvider } from '@/components/providers/AuthProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { ModalProvider } from '@/components/providers/ModalProvider';
+import { WebSocketProvider } from '@/components/providers/SocketProvider';
+import { QueryProvider } from '@/components/providers/QueryProvider';
 
 const inter = Open_Sans({ subsets: ['latin'] })
 
@@ -20,24 +22,28 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className='h-full' suppressHydrationWarning>
       <body
         className={cn(
           inter.className,
-          "bg-white dark:bg-[#313338]"
+          "bg-white dark:bg-[#313338] h-full"
         )}
       >
-        <AuthProvider>
-          <ThemeProvider
-            attribute='class'
-            defaultTheme='dark'
-            enableSystem={false}
-            storageKey='discord-theme'
-          >
-            <ModalProvider />
-            {children}
-          </ThemeProvider>
-        </AuthProvider>
+        <ThemeProvider
+          attribute='class'
+          defaultTheme='dark'
+          enableSystem={false}
+          storageKey='discord-theme'
+        >
+          <AuthProvider>
+            <WebSocketProvider>
+              <ModalProvider />
+              <QueryProvider>
+                {children}
+              </QueryProvider>
+            </WebSocketProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

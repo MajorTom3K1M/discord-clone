@@ -6,6 +6,8 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { ChatHeader } from "@/components/chat/ChatHeader";
+import { ChatInput } from "@/components/chat/ChatInput";
+import { ChatMessages } from "@/components/chat/ChatMessages";
 
 interface ChannelIdPageProps {
     params: {
@@ -71,6 +73,29 @@ const ChannelIdPage = async ({
                 name={channel.name}
                 serverId={channel.serverID}
                 type="channel"
+            />
+            <ChatMessages 
+                member={member}
+                name={channel.name}
+                chatId={channel.id}
+                type="channel"
+                apiUrl="/messages"
+                socketUrl="/ws/messages"
+                socketQuery={{
+                    channelId: channel.id,
+                    serverId: channel.serverID
+                }}
+                paramKey="channelId"
+                paramValue={channel.id}
+            />
+            <ChatInput
+                name={channel.name}
+                type="channel"
+                apiUrl="/ws/messages"
+                query={{
+                    channelId: channel.id,
+                    serverId: channel.serverID
+                }}
             />
         </div>
     );
