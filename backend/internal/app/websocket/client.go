@@ -70,6 +70,16 @@ func (c *Client) ReadPump() {
 				c.Hub.Channels[msg.Channel][c] = true
 				log.Printf("Client %s subscribed to channel %s", c.ID, msg.Channel)
 			}
+		case "unsubscribe":
+			if msg.Channel != "" {
+				if clients, ok := c.Hub.Channels[msg.Channel]; ok {
+					delete(clients, c)
+					if len(clients) == 0 {
+						delete(c.Hub.Channels, msg.Channel)
+					}
+					log.Printf("Client %s unsubscribed from channel %s", c.ID, msg.Channel)
+				}
+			}
 		case "message":
 			c.Hub.BroadcastToChannel(msg)
 		default:

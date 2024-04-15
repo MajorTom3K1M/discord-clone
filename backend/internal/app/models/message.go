@@ -21,6 +21,12 @@ type Message struct {
 }
 
 func (message *Message) BeforeCreate(tx *gorm.DB) (err error) {
-	message.ID = uuid.New()
+	// UUID need to sortable for pagination so i decide to using uuidv7
+	message.ID, err = uuid.NewV7()
+
+	if err != nil {
+		return err
+	}
+
 	return
 }
