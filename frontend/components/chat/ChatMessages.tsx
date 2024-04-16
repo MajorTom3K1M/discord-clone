@@ -1,7 +1,8 @@
 "use client";
 
+import { useInView } from 'react-intersection-observer';
 import { Loader2, ServerCrash } from "lucide-react";
-import { Fragment, useRef, ElementRef } from "react";
+import { Fragment, useRef, ElementRef, useEffect } from "react";
 import { format } from 'date-fns';
 
 import { Member, Message } from "@/types/models";
@@ -55,10 +56,15 @@ export const ChatMessages = ({
         paramKey,
         paramValue
     });
+    const { ref: loadMoreRef, inView } = useInView({
+        rootMargin: '100px',
+        threshold: 0
+    });
     useChatSocket({ queryKey, addKey, updateKey });
     useChatScroll({
         chatRef,
         bottomRef,
+        inView,
         loadMore: fetchNextPage,
         shouldLoadMore: !isFetchingNextPage && !!hasNextPage,
         count: data?.pages?.[0]?.items?.length ?? 0
@@ -87,29 +93,8 @@ export const ChatMessages = ({
     }
 
     return (
-        <div ref={chatRef} className="flex-1 flex flex-col py-4 overflow-y-auto">
-            {!hasNextPage && <div className="flex-1" />}
-            {!hasNextPage && (
-                <ChatWelcome
-                    type={type}
-                    name={name}
-                />
-            )}
-            {hasNextPage && (
-                <div className="flex justify-center">
-                    {isFetchingNextPage ? (
-                        <Loader2 className="h-6 w-6 text-zinc-500 animate-spin my-4"/>
-                    ) : (
-                        <button
-                            onClick={() => fetchNextPage()}
-                            className="text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 text-xs
-                            my-4 dark:hover:text-zinc-300 transition"
-                        >
-                            Load previous messages
-                        </button>
-                    )}
-                </div>
-            )}
+        <div className="flex-1 flex flex-col-reverse py-4 overflow-y-auto">
+            <div ref={bottomRef} />
             <div className="flex flex-col-reverse mt-auto">
                 {data?.pages?.map((group, i) => (
                     <Fragment key={i}>
@@ -131,7 +116,30 @@ export const ChatMessages = ({
                     </Fragment>
                 ))}
             </div>
-            <div ref={bottomRef} />
+            {hasNextPage && (
+                <div className="flex justify-center">
+                    {isFetchingNextPage ? (
+                        <Loader2 className="h-6 w-6 text-zinc-500 animate-spin my-4" />
+                    ) : (
+                        <button
+                            ref={loadMoreRef}
+                            onClick={() => fetchNextPage()}
+                            className="text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 text-xs
+                            my-4 dark:hover:text-zinc-300 transition"
+                        >
+                            Load previous messages
+                        </button>
+                    )}
+                </div>
+            )}
+            {!hasNextPage && (
+                <ChatWelcome
+                    type={type}
+                    name={name}
+                />
+            )}
+            {!hasNextPage && <div className="flex-1" />}
+            <div ref={chatRef} />
         </div>
     )
 };
