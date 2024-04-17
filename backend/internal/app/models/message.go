@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -21,7 +22,7 @@ type Message struct {
 }
 
 func (message *Message) BeforeCreate(tx *gorm.DB) (err error) {
-	// UUID need to sortable for pagination so i decide to using uuidv7
+	// UUID need to sortable for pagination so I decide to using uuidv7
 	message.ID, err = uuid.NewV7()
 
 	if err != nil {
@@ -29,4 +30,11 @@ func (message *Message) BeforeCreate(tx *gorm.DB) (err error) {
 	}
 
 	return
+}
+
+func (message *Message) Validate() error {
+	if message.Content == "" {
+		return fmt.Errorf("Content cannot be empty")
+	}
+	return nil
 }

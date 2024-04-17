@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"discord-backend/internal/app/models"
 	"encoding/json"
 	"log"
 	"time"
@@ -16,14 +15,19 @@ type Client struct {
 	ID   string
 }
 
+type ContentInterface interface {
+	Validate() error
+}
+
 type Content struct {
 	Message string `json:"message"`
 	FileUrl string `json:"fileUrl"`
 }
+
 type Message struct {
-	Type    string         `json:"type"`              // e.g., "chat", "subscribe", "unsubscribe"
-	Channel string         `json:"channel,omitempty"` // Channel or conversation ID
-	Content models.Message `json:"content,omitempty"` // Actual message content
+	Type    string           `json:"type"`
+	Channel string           `json:"channel,omitempty"`
+	Content ContentInterface `json:"content,omitempty"`
 }
 
 const (

@@ -15,4 +15,7 @@ func SocketRoutes(router *gin.RouterGroup, socketHandler *handlers.WebsocketHand
 	router.POST("/ws/messages", socketHandler.WebSocketMessageHandler(wsHub))
 	router.PATCH("/ws/messages/:messageId", socketHandler.WebScoketEditMessageHandler(wsHub))
 	router.DELETE("/ws/messages/:messageId", socketHandler.WebScoketDeleteMessageHandler(wsHub))
+
+	router.POST("/ws/direct-messages", socketHandler.WebSocketDirectMessageHandler(wsHub))
+	router.PATCH("/ws/direct-messages/:directMessageId", socketHandler.WebScoketEditMessageHandler(wsHub))
 }

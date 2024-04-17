@@ -15,6 +15,20 @@ func NewConversationService(db *gorm.DB) *ConversationService {
 	return &ConversationService{DB: db}
 }
 
+func (c *ConversationService) GetConversation(conversationID, profileID uuid.UUID) (*models.Conversation, error) {
+	var conversation models.Conversation
+	err := c.DB.Preload("MemberOne.Profile").Preload("MemberTwo.Profile").
+		Where("id = ? AND (member_one_id IN (SELECT id FROM members WHERE profile_id = ?) OR member_two_id IN (SELECT id FROM members WHERE profile_id = ?))",
+			conversationID, profileID, profileID).
+		First(&conversation).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &conversation, nil
+}
+
 func (c *ConversationService) FindConversation(memberOneID, memberTwoID uuid.UUID) (*models.Conversation, error) {
 	var conversation models.Conversation
 	err := c.DB.Preload("MemberOne.Profile").Preload("MemberTwo.Profile").
