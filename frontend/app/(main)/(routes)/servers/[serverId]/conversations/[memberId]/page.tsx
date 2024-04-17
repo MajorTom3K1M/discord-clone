@@ -6,6 +6,8 @@ import { cookies } from 'next/headers';
 import { Member } from "@/types/models";
 import { getOrCreateConversation } from "@/lib/conversation";
 import { ChatHeader } from "@/components/chat/ChatHeader";
+import { ChatMessages } from "@/components/chat/ChatMessages";
+import { ChatInput } from "@/components/chat/ChatInput";
 
 const getMember = async (serverId: string) => {
     try {
@@ -54,7 +56,7 @@ const MemberIdPage = async ({
 
     const { memberOne, memberTwo } = conversation;
 
-    const otherMember = memberOne?.profileID === profile.id ? memberTwo : memberOne;
+    const otherMember = memberOne.profileID === profile.id ? memberTwo : memberOne;
  
     return (
         <div className="bg-white dark:bg-[#313338] flex flex-col h-full">
@@ -63,6 +65,27 @@ const MemberIdPage = async ({
                 name={otherMember?.profile?.name ?? ""}
                 serverId={params.serverId}
                 type="conversation"
+            />
+            <ChatMessages 
+                member={currentMember}
+                name={otherMember.profile.name}
+                chatId={conversation.id}
+                type="conversation"
+                apiUrl="/direct-messages"
+                paramKey="conversationId"
+                paramValue={conversation.id}
+                socketUrl="/ws/direct-messages"
+                socketQuery={{
+                    conversationId: conversation.id,
+                }}
+            />
+            <ChatInput 
+                name={otherMember.profile.name}
+                type="conversation"
+                apiUrl="/ws/direct-messages"
+                query={{
+                    conversationId: conversation.id
+                }}
             />
         </div>
     );

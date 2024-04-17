@@ -20,7 +20,7 @@ export interface Member {
     id: string;
     role: MemberRole;
     profileID: string;
-    profile?: Profile;
+    profile: Profile;
     serverID: string;
     server?: Server; // Made optional to prevent circular reference issues
     messages?: Message[]; // Assuming Message is another interface you will define
@@ -92,9 +92,9 @@ export interface DirectMessage {
 export interface Conversation {
     id: string;
     memberOneID: string;
-    memberOne?: Member; // Optional to simplify type structure and usage
+    memberOne: Member; // Optional to simplify type structure and usage
     memberTwoID: string;
-    memberTwo?: Member; // Optional to simplify type structure and usage
+    memberTwo: Member; // Optional to simplify type structure and usage
     directMessages?: DirectMessage[]; // Assuming it can be optional
     created_at: Date;
     updated_at: Date;
