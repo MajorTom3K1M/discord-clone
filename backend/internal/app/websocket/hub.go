@@ -1,22 +1,33 @@
 package websocket
 
-import "log"
+import (
+	"log"
+	"sync"
+
+	"github.com/pion/webrtc/v3"
+	pionwebrtc "github.com/pion/webrtc/v3"
+)
 
 type Hub struct {
-	Clients    map[*Client]bool
-	Broadcast  chan Message
-	Register   chan *Client
-	Unregister chan *Client
-	Channels   map[string]map[*Client]bool
+	Clients       map[*Client]bool
+	Broadcast     chan Message
+	Register      chan *Client
+	Unregister    chan *Client
+	Channels      map[string]map[*Client]bool
+	PeerChannels  map[string][]PeerConnectionState
+	TrackChannels map[string]map[string]*pionwebrtc.TrackLocalStaticRTP
+	sync.RWMutex
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		Broadcast:  make(chan Message),
-		Register:   make(chan *Client),
-		Unregister: make(chan *Client),
-		Clients:    make(map[*Client]bool),
-		Channels:   make(map[string]map[*Client]bool),
+		Broadcast:     make(chan Message),
+		Register:      make(chan *Client),
+		Unregister:    make(chan *Client),
+		Clients:       make(map[*Client]bool),
+		Channels:      make(map[string]map[*Client]bool),
+		PeerChannels:  make(map[string][]PeerConnectionState),
+		TrackChannels: make(map[string]map[string]*webrtc.TrackLocalStaticRTP),
 	}
 }
 

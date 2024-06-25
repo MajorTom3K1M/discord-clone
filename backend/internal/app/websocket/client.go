@@ -3,9 +3,11 @@ package websocket
 import (
 	"encoding/json"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/pion/webrtc/v3"
 )
 
 type Client struct {
@@ -13,21 +15,32 @@ type Client struct {
 	Conn *websocket.Conn
 	Send chan Message
 	ID   string
+	sync.Mutex
 }
 
 type ContentInterface interface {
 	Validate() error
 }
 
-type Content struct {
-	Message string `json:"message"`
-	FileUrl string `json:"fileUrl"`
+// type Content struct {
+// 	Message string `json:"message"`
+// 	FileUrl string `json:"fileUrl"`
+// }
+
+type ContentData struct {
+	Data string `json:"data"`
 }
 
 type Message struct {
 	Type    string           `json:"type"`
 	Channel string           `json:"channel,omitempty"`
 	Content ContentInterface `json:"content,omitempty"`
+}
+
+type WebRTCMessage struct {
+	Offer     webrtc.SessionDescription `json:"offer,omitempty"`
+	Answer    webrtc.SessionDescription `json:"answer,omitempty"`
+	Candidate webrtc.ICECandidateInit   `json:"candidate,omitempty"`
 }
 
 const (
@@ -53,6 +66,9 @@ func (c *Client) ReadPump() {
 		c.Conn.Close()
 	}()
 
+	var ps *PeerConnectionState
+	var err error
+
 	c.Conn.SetReadLimit(maxMessageSize)
 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
@@ -62,6 +78,7 @@ func (c *Client) ReadPump() {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
+			log.Printf("error: %v", err)
 			break
 		}
 
@@ -86,6 +103,29 @@ func (c *Client) ReadPump() {
 			}
 		case "message":
 			c.Hub.BroadcastToChannel(msg)
+		case "initializeCall":
+			if ps == nil {
+				ps, err = NewPeerConnectionState(c, msg.Channel)
+				if err != nil {
+					log.Println("Error creating PeerConnection:", err)
+					continue
+				}
+				defer ps.peerConnection.Close()
+			}
+		case "answer":
+			if ps != nil {
+				webrtcMsg := msg.Content.(*WebRTCMessage)
+				if err := ps.peerConnection.SetRemoteDescription(webrtcMsg.Answer); err != nil {
+					log.Println("Failed to set remote description:", err)
+				}
+			}
+		case "candidate":
+			if ps != nil {
+				webrtcMsg := msg.Content.(*WebRTCMessage)
+				if err := ps.peerConnection.AddICECandidate(webrtcMsg.Candidate); err != nil {
+					log.Println("Failed to add ICE candidate:", err)
+				}
+			}
 		default:
 			log.Printf("Unknown message type received: %v", msg.Type)
 		}
@@ -137,84 +177,16 @@ func (c *Client) WritePump() {
 	}
 }
 
-// var newline = []byte{'\n'}
+func (contentData *ContentData) Validate() error {
+	return nil
+}
 
-// func (c *Client) ReadPump(manager *Manager) {
-// 	defer func() {
-// 		manager.unregister <- c
-// 		c.Conn.Close()
-// 	}()
+func (webrtcMessage *WebRTCMessage) Validate() error {
+	return nil
+}
 
-// 	c.Conn.SetReadLimit(maxMessageSize)              // Define maxMessageSize as needed
-// 	c.Conn.SetReadDeadline(time.Now().Add(pongWait)) // pongWait is the duration to wait for a pong message
-// 	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
-
-// 	for {
-// 		_, message, err := c.Conn.ReadMessage()
-// 		if err != nil {
-// 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-// 				log.Printf("error: %v", err)
-// 			}
-// 			break
-// 		}
-
-// 		// Deserialize the message to a Message struct
-// 		var msg Message
-// 		err = json.Unmarshal(message, &msg)
-// 		if err != nil {
-// 			log.Println("error parsing message:", err)
-// 			continue
-// 		}
-
-// 		// Handle the message based on its type
-// 		switch msg.Type {
-// 		case "chat":
-// 			manager.BroadcastToChannel(msg.Channel, []byte(msg.Content))
-// 		case "subscribe":
-// 			manager.SubscribeClientToChannel(c, msg.Channel)
-// 		case "unsubscribe":
-// 			manager.UnsubscribeClientFromChannel(c, msg.Channel)
-// 		}
-// 	}
-// }
-
-// func (c *Client) WritePump() {
-// 	ticker := time.NewTicker(pongWait)
-// 	defer func() {
-// 		ticker.Stop()
-// 		c.Conn.Close()
-// 	}()
-
-// 	for {
-// 		select {
-// 		case message, ok := <-c.Send:
-// 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
-// 			if !ok {
-// 				// The Send channel was closed
-// 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
-// 				return
-// 			}
-
-// 			w, err := c.Conn.NextWriter(websocket.TextMessage)
-// 			if err != nil {
-// 				return
-// 			}
-// 			w.Write(message)
-
-// 			n := len(c.Send)
-// 			for i := 0; i < n; i++ {
-// 				w.Write(newline) // Assume newline is defined
-// 				w.Write(<-c.Send)
-// 			}
-
-// 			if err := w.Close(); err != nil {
-// 				return
-// 			}
-// 		case <-ticker.C:
-// 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
-// 			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-// 				return
-// 			}
-// 		}
-// 	}
-// }
+func (c *Client) WriteJSON(v interface{}) error {
+	c.Lock()
+	defer c.Unlock()
+	return c.Conn.WriteJSON(v)
+}
