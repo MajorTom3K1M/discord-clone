@@ -50,7 +50,26 @@ func WebSocketHandler(hub *ws.Hub) gin.HandlerFunc {
 			http.Error(c.Writer, "Could not upgrade to WebSocket", http.StatusBadRequest)
 			return
 		}
-		client := &ws.Client{Hub: hub, Conn: conn, Send: make(chan ws.Message), ID: c.Request.RemoteAddr}
+
+		profileIDInterface, exists := c.Get("profile_id")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "profile_id not found"})
+			return
+		}
+
+		profileIDStr, ok := profileIDInterface.(string)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID format"})
+			return
+		}
+
+		profileID, err := uuid.Parse(profileIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid profile ID"})
+			return
+		}
+
+		client := &ws.Client{Hub: hub, Conn: conn, Send: make(chan ws.Message), ID: c.Request.RemoteAddr, ProfileID: profileID}
 		hub.Register <- client
 
 		go client.ReadPump()

@@ -3,6 +3,7 @@ package websocket
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -11,8 +12,11 @@ import (
 )
 
 type PeerConnectionState struct {
-	peerConnection *webrtc.PeerConnection
-	client         *Client
+	peerConnection       *webrtc.PeerConnection
+	client               *Client
+	pendingCandidates    []webrtc.ICECandidateInit
+	remoteDescriptionSet bool
+	currentChannel       string
 }
 
 func NewPeerConnectionState(c *Client, channel string) (*PeerConnectionState, error) {
@@ -33,7 +37,7 @@ func NewPeerConnectionState(c *Client, channel string) (*PeerConnectionState, er
 	if _, ok := c.Hub.TrackChannels[channel]; !ok {
 		c.Hub.TrackChannels[channel] = make(map[string]*webrtc.TrackLocalStaticRTP)
 	}
-	c.Hub.PeerChannels[channel] = append(c.Hub.PeerChannels[channel], PeerConnectionState{peerConnection, c})
+	c.Hub.PeerChannels[channel] = append(c.Hub.PeerChannels[channel], PeerConnectionState{peerConnection, c, make([]webrtc.ICECandidateInit, 0), false, channel})
 	c.Hub.Unlock()
 
 	peerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
@@ -48,15 +52,14 @@ func NewPeerConnectionState(c *Client, channel string) (*PeerConnectionState, er
 		}
 
 		c.Lock()
-		if writeErr := c.Conn.WriteJSON(&Message{
+		c.Hub.SendToClient(c, Message{
 			Type:    "candidate",
 			Channel: channel,
 			Content: &ContentData{
 				Data: string(candidateString),
 			},
-		}); writeErr != nil {
-			log.Println(writeErr)
-		}
+		})
+
 		c.Unlock()
 	})
 
@@ -100,6 +103,177 @@ func NewPeerConnectionState(c *Client, channel string) (*PeerConnectionState, er
 		peerConnection: peerConnection,
 		client:         c,
 	}, nil
+}
+
+func (ps *PeerConnectionState) closePeerConnection() {
+	log.Printf("Closing peer connection for channel %s", ps.currentChannel)
+
+	if ps.peerConnection != nil {
+		ps.peerConnection.OnICECandidate(nil)
+		ps.peerConnection.OnConnectionStateChange(nil)
+		ps.peerConnection.OnTrack(nil)
+		ps.peerConnection.Close()
+		ps.peerConnection = nil
+	}
+
+	ps.client.Hub.Lock()
+	defer ps.client.Hub.Unlock()
+	for i, pcState := range ps.client.Hub.PeerChannels[ps.currentChannel] {
+		if pcState.peerConnection == ps.peerConnection {
+			ps.client.Hub.PeerChannels[ps.currentChannel] = append(ps.client.Hub.PeerChannels[ps.currentChannel][:i], ps.client.Hub.PeerChannels[ps.currentChannel][i+1:]...)
+			break
+		}
+	}
+	log.Printf("Peer connection closed for channel %s", ps.currentChannel)
+}
+
+func (ps *PeerConnectionState) ChangeChannel(newChannel string) error {
+	log.Printf("Attempting to change channel from %s to %s", ps.currentChannel, newChannel)
+
+	ps.closePeerConnection()
+
+	err := ps.initNewPeerConnection(newChannel)
+	if err != nil {
+		log.Printf("Error initializing new peer connection: %v", err)
+		return err
+	}
+
+	log.Printf("Successfully changed channel to %s", newChannel)
+	return nil
+}
+
+func (ps *PeerConnectionState) initNewPeerConnection(channel string) error {
+	log.Printf("Initializing new peer connection for channel %s", channel)
+
+	config := webrtc.Configuration{
+		ICEServers: []webrtc.ICEServer{
+			{URLs: []string{"stun:stun.l.google.com:19302"}},
+		},
+	}
+	peerConnection, err := webrtc.NewPeerConnection(config)
+	if err != nil {
+		log.Printf("Error creating peer connection: %v", err)
+		return err
+	}
+
+	ps.peerConnection = peerConnection
+	ps.currentChannel = channel
+	ps.remoteDescriptionSet = false
+	ps.pendingCandidates = []webrtc.ICECandidateInit{}
+
+	log.Printf("Adding transceivers for channel %s", channel)
+	for _, typ := range []webrtc.RTPCodecType{webrtc.RTPCodecTypeVideo, webrtc.RTPCodecTypeAudio} {
+		if _, err := peerConnection.AddTransceiverFromKind(typ, webrtc.RTPTransceiverInit{
+			Direction: webrtc.RTPTransceiverDirectionRecvonly,
+		}); err != nil {
+			log.Printf("Error adding transceiver: %v", err)
+			return err
+		}
+	}
+
+	ps.client.Hub.Lock()
+	if _, ok := ps.client.Hub.TrackChannels[channel]; !ok {
+		ps.client.Hub.TrackChannels[channel] = make(map[string]*webrtc.TrackLocalStaticRTP)
+	}
+	ps.client.Hub.PeerChannels[channel] = append(ps.client.Hub.PeerChannels[channel], *ps)
+	ps.client.Hub.Unlock()
+
+	log.Printf("Setting up event handlers for peer connection in channel %s", channel)
+	peerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
+		if i == nil {
+			return
+		}
+		log.Printf("New ICE candidate found: %s", i.String())
+		candidateString, err := json.Marshal(i.ToJSON())
+		if err != nil {
+			log.Printf("Error marshaling ICE candidate: %v", err)
+			return
+		}
+
+		ps.client.Lock()
+		defer ps.client.Unlock()
+
+		ps.client.Hub.SendToClient(ps.client, Message{
+			Type:    "candidate",
+			Channel: channel,
+			Content: &ContentData{
+				Data: string(candidateString),
+			},
+		})
+	})
+
+	peerConnection.OnConnectionStateChange(func(p webrtc.PeerConnectionState) {
+		log.Printf("Peer Connection State has changed: %s", p.String())
+		switch p {
+		case webrtc.PeerConnectionStateFailed:
+			log.Println("PeerConnectionStateFailed")
+			if err := peerConnection.Close(); err != nil {
+				log.Printf("Error closing peer connection: %v", err)
+			}
+		case webrtc.PeerConnectionStateClosed:
+			log.Println("PeerConnectionStateClosed")
+			ps.client.Hub.signalPeerConnections(channel)
+		default:
+		}
+	})
+
+	peerConnection.OnTrack(func(t *webrtc.TrackRemote, _ *webrtc.RTPReceiver) {
+		log.Printf("Track received: %s", t.Kind().String())
+
+		// Create a track to fan out our incoming video to all peers
+		trackLocal := ps.client.Hub.addTrack(channel, t)
+
+		defer ps.client.Hub.removeTrack(channel, trackLocal)
+
+		buf := make([]byte, 1500)
+		for {
+			i, _, err := t.Read(buf)
+			if err != nil {
+				if err == io.EOF {
+					log.Println("Track reading ended (EOF)")
+					break
+				}
+				log.Printf("Error reading from track: %v", err)
+				return
+			}
+
+			if _, err = trackLocal.Write(buf[:i]); err != nil {
+				log.Printf("Error writing to track: %v", err)
+				return
+			}
+		}
+	})
+
+	log.Printf("Signaling peer connections for channel %s", channel)
+	ps.client.Hub.signalPeerConnections(channel)
+
+	log.Printf("Peer connection initialized for channel %s", channel)
+	return nil
+}
+
+func (ps *PeerConnectionState) SetRemoteDescription(desc webrtc.SessionDescription) error {
+	if err := ps.peerConnection.SetRemoteDescription(desc); err != nil {
+		return err
+	}
+	ps.remoteDescriptionSet = true
+
+	// Process any pending ICE candidates
+	for _, candidate := range ps.pendingCandidates {
+		if err := ps.peerConnection.AddICECandidate(candidate); err != nil {
+			log.Println("Failed to add ICE candidate:", err)
+		}
+	}
+	ps.pendingCandidates = nil
+	return nil
+}
+
+func (ps *PeerConnectionState) AddICECandidate(candidate webrtc.ICECandidateInit) error {
+	if ps.remoteDescriptionSet {
+		return ps.peerConnection.AddICECandidate(candidate)
+	}
+	// Queue the candidate if the remote description is not set
+	ps.pendingCandidates = append(ps.pendingCandidates, candidate)
+	return nil
 }
 
 // Add to list of tracks and fire renegotation for all PeerConnections
@@ -191,15 +365,17 @@ func (h *Hub) signalPeerConnections(channel string) {
 				return true
 			}
 
-			if err = h.PeerChannels[channel][i].client.WriteJSON(&Message{
-				Type:    "offer",
-				Channel: channel,
-				Content: &ContentData{
-					Data: string(offerString),
+			currentClient := h.PeerChannels[channel][i].client
+			currentClient.Hub.SendToClient(
+				currentClient,
+				Message{
+					Type:    "offer",
+					Channel: channel,
+					Content: &ContentData{
+						Data: string(offerString),
+					},
 				},
-			}); err != nil {
-				return true
-			}
+			)
 		}
 
 		return

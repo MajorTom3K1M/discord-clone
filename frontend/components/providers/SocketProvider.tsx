@@ -2,10 +2,12 @@
 
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { useAuth } from './AuthProvider';
-import { Message } from '@/types/models';
+import { Message, WebRTCMessage } from '@/types/models';
+import { channel } from 'diagnostics_channel';
 
 type WebSocketContextType = {
     send: (event: string, data: any) => void;
+    sendWebRTCMessage: (type: string, channel: string, message: WebRTCMessage) => void,
     on: (event: string, handler: (data: any) => void) => void;
     off: (event: string) => void;
     socket: WebSocket | null;
@@ -14,6 +16,7 @@ type WebSocketContextType = {
 
 const WebSocketContext = createContext<WebSocketContextType>({
     send: (event: string, data: any) => { },
+    sendWebRTCMessage: (type: string, channel: string, message: WebRTCMessage) => {},
     on: (event: string, handler: (data: any) => void) => { },
     off: (event: string) => { },
     socket: null,
@@ -64,6 +67,7 @@ export const WebSocketProvider = ({
 
         ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
+            console.log("Received Message : ", message)
             if (message.channel) {
                 const handlers = listeners.current.get(message.channel);
                 if (handlers) {
@@ -88,6 +92,7 @@ export const WebSocketProvider = ({
 
     const send = (event: string, data: Message) => {
         if (socket?.readyState === WebSocket.OPEN) {
+            console.log({ type: "message", channel: event, content: data })
             socket.send(JSON.stringify({ type: "message", channel: event, content: data }));
         }
     };
@@ -114,8 +119,16 @@ export const WebSocketProvider = ({
         }
     };
 
+    const sendWebRTCMessage = (type: string, channel: string, message: WebRTCMessage) => {
+        if (socket?.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify({ type: type, channel: channel, content: message }));
+        }
+    }
+
     return (
-        <WebSocketContext.Provider value={{ send, on, off, socket, isConnected }}>
+        <WebSocketContext.Provider value={{ 
+            send, on, off, socket, isConnected,  sendWebRTCMessage
+        }}>
             {children}
         </WebSocketContext.Provider>
     );

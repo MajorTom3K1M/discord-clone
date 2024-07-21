@@ -1,3 +1,5 @@
+const plugin = require('tailwindcss/plugin');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: ["class"],
@@ -73,5 +75,32 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    plugin(function ({ matchVariant, theme }) {
+      matchVariant(
+        'nth',
+        (value) => {
+          return `&:nth-child(${value})`;
+        },
+        {
+          values: {
+            DEFAULT: 'n',
+            '2n': '2n', // `nth-2n:utility` will generate `:nth-child(2n)` CSS selector
+            '3n': '3n',
+            '4n': '4n',
+            '5n': '5n'
+          }
+        }
+      )
+    }),
+    plugin(function ({ matchVariant, theme }) {
+      matchVariant(
+        'nth-last-child',
+        (value) => {
+          return `&:nth-last-child(${value})`;
+        }
+      )
+    })
+  ],
 }

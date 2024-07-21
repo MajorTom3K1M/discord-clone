@@ -78,3 +78,12 @@ func (h *Hub) BroadcastToChannel(msg Message) {
 		log.Printf("No subscribers in channel: %s", msg.Channel)
 	}
 }
+
+func (h *Hub) SendToClient(client *Client, msg Message) {
+	select {
+	case client.Send <- msg:
+	default:
+		close(client.Send)
+		delete(h.Clients, client)
+	}
+}

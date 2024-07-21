@@ -1,13 +1,14 @@
 import axios from "@/utils/axios";
 
 import { currentProfile } from "@/lib/currentProfile";
-import { Channel, Member } from "@/types/models";
+import { Channel, ChannelType, Member } from "@/types/models";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatMessages } from "@/components/chat/ChatMessages";
+import { VideoConference } from "@/components/chat/video/VideoConference";
 
 interface ChannelIdPageProps {
     params: {
@@ -69,34 +70,48 @@ const ChannelIdPage = async ({
 
     return (
         <div className="bg-white dark:bg-[#313338] flex flex-col h-full">
-            <ChatHeader 
+            <ChatHeader
                 name={channel.name}
                 serverId={channel.serverID}
                 type="channel"
             />
-            <ChatMessages 
-                member={member}
-                name={channel.name}
-                chatId={channel.id}
-                type="channel"
-                apiUrl="/messages"
-                socketUrl="/ws/messages"
-                socketQuery={{
-                    channelId: channel.id,
-                    serverId: channel.serverID
-                }}
-                paramKey="channelId"
-                paramValue={channel.id}
-            />
-            <ChatInput
-                name={channel.name}
-                type="channel"
-                apiUrl="/ws/messages"
-                query={{
-                    channelId: channel.id,
-                    serverId: channel.serverID
-                }}
-            />
+            {channel.type === ChannelType.TEXT ? (
+                <>
+                    <ChatMessages
+                        member={member}
+                        name={channel.name}
+                        chatId={channel.id}
+                        type="channel"
+                        apiUrl="/messages"
+                        socketUrl="/ws/messages"
+                        socketQuery={{
+                            channelId: channel.id,
+                            serverId: channel.serverID
+                        }}
+                        paramKey="channelId"
+                        paramValue={channel.id}
+                    />
+                    <ChatInput
+                        name={channel.name}
+                        type="channel"
+                        apiUrl="/ws/messages"
+                        query={{
+                            channelId: channel.id,
+                            serverId: channel.serverID
+                        }}
+                    />
+                </>
+            ) : null}
+
+            {channel.type === ChannelType.AUDIO ? (
+                <>
+
+                </>
+            ) : null}
+
+            {channel.type === ChannelType.VIDEO ? (
+                <VideoConference chatId={channel.id}  />
+            ) : null}
         </div>
     );
 }

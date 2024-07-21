@@ -99,3 +99,8 @@ export interface Conversation {
     created_at: Date;
     updated_at: Date;
 }
+
+export interface WebRTCMessage {
+    candidate?: RTCIceCandidate,
+    answer?: RTCLocalSessionDescriptionInit
+}

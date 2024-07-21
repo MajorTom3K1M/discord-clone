@@ -17,6 +17,8 @@ import { ServerSearch } from './ServerSearch';
 import { ServerSection } from './ServerSection';
 import { ServerChannel } from './ServerChannel';
 import { ServerMember } from './ServerMember';
+import { UserAvatar } from '../UserAvatar';
+import { ServerChannelMember } from './ServerChannelMember';
 
 interface ServerSidebarProps {
     serverId: string;
@@ -155,12 +157,33 @@ export const ServerSidebar = async ({
                         />
                         <div className="space-y-[2px]">
                             {audioChannels.map((channel) => (
-                                <ServerChannel
-                                    key={channel.id}
-                                    channel={channel}
-                                    role={role}
-                                    server={server}
-                                />
+                                <div className='flex flex-col' key={channel.id}>
+                                    <ServerChannel
+                                        key={channel.id}
+                                        channel={channel}
+                                        role={role}
+                                        server={server}
+                                    />
+                                    <ServerChannelMember 
+                                        className='pl-8 pb-2'
+                                        src='https://cdn.discordapp.com/avatars/293021833350086656/8b125db71d831bd62fb80818bc574777.webp'
+                                        name={'MajorTom'}
+                                    />
+                                    {/* <div className='pl-8 pb-2 text-zinc-500 dark:text-zinc-400 
+                                        hover:text-zinc-600 dark:hover:text-zinc-300 transition
+                                        text-[14px]'
+                                    >
+                                        <div className='relative flex items-center cursor-pointer flex-1 
+                                            hover:bg-zinc-700/10 dark:hover:bg-zinc-700/50 transition rounded-md
+                                            pt-1 pb-1'>
+                                            <UserAvatar
+                                                className='h-6 w-6 md:h-6 md:w-6 ml-2 mr-2'
+                                                src='https://cdn.discordapp.com/avatars/293021833350086656/8b125db71d831bd62fb80818bc574777.webp'
+                                            />
+                                            MajorTom
+                                        </div>
+                                    </div> */}
+                                </div>
                             ))}
                         </div>
                     </div>
