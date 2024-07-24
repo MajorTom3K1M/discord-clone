@@ -110,7 +110,7 @@ const ChannelIdPage = async ({
             ) : null}
 
             {channel.type === ChannelType.VIDEO ? (
-                <VideoConference chatId={channel.id}  />
+                <VideoConference chatId={channel.id} serverId={channel.serverID} />
             ) : null}
         </div>
     );

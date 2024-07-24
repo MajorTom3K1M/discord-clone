@@ -16,8 +16,11 @@ type Client struct {
 	Conn                *websocket.Conn
 	Send                chan Message
 	ID                  string
+	Username            string
 	ProfileID           uuid.UUID
 	PeerConnectionState *PeerConnectionState
+	StreamID            string
+	ImageURL            string
 	sync.Mutex
 }
 
@@ -29,19 +32,24 @@ type ContentInterface interface{}
 // }
 
 type ContentData struct {
-	Data string `json:"data"`
+	Data     string `json:"data"`
+	Username string `json:"username,omitempty"`
+	StreamID string `json:"streamId,omitempty"`
+	ImageURL string `json:"imageURL,omitempty"`
 }
 
 type Message struct {
-	Type    string           `json:"type"`
-	Channel string           `json:"channel,omitempty"`
-	Content ContentInterface `json:"content,omitempty"`
+	Type     string           `json:"type"`
+	Channel  string           `json:"channel,omitempty"`
+	ServerID string           `json:"channel,omitempty"`
+	Content  ContentInterface `json:"content,omitempty"`
 }
 
 type WebRTCMessage struct {
 	Offer     webrtc.SessionDescription `json:"offer,omitempty"`
 	Answer    webrtc.SessionDescription `json:"answer,omitempty"`
 	Candidate webrtc.ICECandidateInit   `json:"candidate,omitempty"`
+	StreamID  string                    `json:"streamId,omitempty"`
 }
 
 const (
@@ -110,18 +118,25 @@ func (c *Client) ReadPump() {
 		case "initializeCall":
 			if c.PeerConnectionState == nil {
 				log.Printf("Client %s initializeCall", msg.Channel)
+				webrtcMsg := msg.Content.(WebRTCMessage)
+				c.StreamID = webrtcMsg.StreamID
 				c.PeerConnectionState, err = NewPeerConnectionState(c, msg.Channel)
 				if err != nil {
 					log.Println("Error creating PeerConnection:", err)
 					continue
 				}
+				// c.PeerConnectionState.streamID = webrtcMsg.StreamID
 			} else if c.PeerConnectionState.currentChannel != msg.Channel {
 				log.Printf("Client %s changing channel from %s to %s", c.ID, c.PeerConnectionState.currentChannel, msg.Channel)
+				webrtcMsg := msg.Content.(WebRTCMessage)
+				c.StreamID = webrtcMsg.StreamID
 				err = c.PeerConnectionState.ChangeChannel(msg.Channel)
 				if err != nil {
 					log.Println("Error changing channel:", err)
 					continue
 				}
+				// webrtcMsg := msg.Content.(WebRTCMessage)
+				// c.PeerConnectionState.streamID = webrtcMsg.StreamID
 			}
 		case "answer":
 			if c.PeerConnectionState != nil {
@@ -136,112 +151,18 @@ func (c *Client) ReadPump() {
 				if err := c.PeerConnectionState.AddICECandidate(webrtcMsg.Candidate); err != nil {
 					log.Println("Failed to add ICE candidate:", err)
 				}
+
+				c.Hub.BroadcastToPeerChannel(Message{
+					Type:    "participant",
+					Channel: msg.Channel,
+					Content: c.Hub.GetUsersFromPeerChannel(msg.Channel),
+				})
 			}
 		default:
 			log.Printf("Unknown message type received: %v", msg.Type)
 		}
 	}
 }
-
-// func (c *Client) ReadPump() {
-// 	defer func() {
-// 		c.Hub.Unregister <- c
-// 		c.Conn.Close()
-// 	}()
-
-// 	// var ps *PeerConnectionState
-// 	var err error
-
-// 	c.Conn.SetReadLimit(maxMessageSize)
-// 	c.Conn.SetReadDeadline(time.Now().Add(pongWait))
-// 	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
-// 	for {
-// 		var msg Message
-// 		if err := c.Conn.ReadJSON(&msg); err != nil {
-// 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-// 				log.Printf("error: %v", err)
-// 			}
-// 			log.Printf("error: %v", err)
-// 			break
-// 		}
-
-// 		switch msg.Type {
-// 		case "subscribe":
-// 			if msg.Channel != "" {
-// 				if _, ok := c.Hub.Channels[msg.Channel]; !ok {
-// 					c.Hub.Channels[msg.Channel] = make(map[*Client]bool)
-// 				}
-// 				c.Hub.Channels[msg.Channel][c] = true
-// 				log.Printf("Client %s subscribed to channel %s", c.ID, msg.Channel)
-// 			}
-// 		case "unsubscribe":
-// 			if msg.Channel != "" {
-// 				if clients, ok := c.Hub.Channels[msg.Channel]; ok {
-// 					delete(clients, c)
-// 					if len(clients) == 0 {
-// 						delete(c.Hub.Channels, msg.Channel)
-// 					}
-// 					log.Printf("Client %s unsubscribed from channel %s", c.ID, msg.Channel)
-// 				}
-// 			}
-// 		case "message":
-// 			c.Hub.BroadcastToChannel(msg)
-// 		case "initializeCall":
-// 			if c.PeerConnectionState == nil {
-// 				log.Printf("Client %s initializeCall", msg.Channel)
-// 				c.PeerConnectionState, err = NewPeerConnectionState(c, msg.Channel)
-// 				if err != nil {
-// 					log.Println("Error creating PeerConnection:", err)
-// 					continue
-// 				}
-// 				defer c.PeerConnectionState.peerConnection.Close()
-// 			} else if c.PeerConnectionState.currentChannel != msg.Channel {
-// 				log.Printf("Client %s changing channel from %s to %s", c.ID, c.PeerConnectionState.currentChannel, msg.Channel)
-// 				err = c.PeerConnectionState.ChangeChannel(msg.Channel)
-// 				if err != nil {
-// 					log.Println("Error changing channel:", err)
-// 					continue
-// 				}
-// 			}
-// 			// else if c.PeerConnectionState.currentChannel != msg.Channel {
-// 			// 	fmt.Printf("WORK !!!! : %s \n ", c.PeerConnectionState.peerConnection.ConnectionState().String())
-// 			// 	c.PeerConnectionState.peerConnection.Close()
-// 			// 	c.PeerConnectionState, err = NewPeerConnectionState(c, msg.Channel)
-// 			// 	if err != nil {
-// 			// 		log.Println("Error creating PeerConnection:", err)
-// 			// 		continue
-// 			// 	}
-// 			// 	defer c.PeerConnectionState.peerConnection.Close()
-// 			// }
-
-// 			//  else {
-// 			// 	c.PeerConnectionState.peerConnection.Close()
-// 			// 	c.PeerConnectionState, err = NewPeerConnectionState(c, msg.Channel)
-// 			// 	if err != nil {
-// 			// 		log.Println("Error creating PeerConnection:", err)
-// 			// 		continue
-// 			// 	}
-// 			// 	defer c.PeerConnectionState.peerConnection.Close()
-// 			// }
-// 		case "answer":
-// 			if c.PeerConnectionState != nil {
-// 				webrtcMsg := msg.Content.(WebRTCMessage)
-// 				if err := c.PeerConnectionState.SetRemoteDescription(webrtcMsg.Answer); err != nil {
-// 					log.Println("Failed to set remote description:", err)
-// 				}
-// 			}
-// 		case "candidate":
-// 			if c.PeerConnectionState != nil {
-// 				webrtcMsg := msg.Content.(WebRTCMessage)
-// 				if err := c.PeerConnectionState.AddICECandidate(webrtcMsg.Candidate); err != nil {
-// 					log.Println("Failed to add ICE candidate:", err)
-// 				}
-// 			}
-// 		default:
-// 			log.Printf("Unknown message type received: %v", msg.Type)
-// 		}
-// 	}
-// }
 
 func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
@@ -309,7 +230,7 @@ func (m *Message) UnmarshalJSON(data []byte) error {
 
 	// Determine the type of content based on the message type
 	switch aux.Type {
-	case "candidate", "answer":
+	case "candidate", "answer", "initializeCall":
 		var webRTCMessage WebRTCMessage
 		if err := json.Unmarshal(aux.Content, &webRTCMessage); err != nil {
 			return err

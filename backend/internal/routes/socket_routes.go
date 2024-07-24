@@ -11,7 +11,7 @@ func SocketRoutes(router *gin.RouterGroup, socketHandler *handlers.WebsocketHand
 	wsHub := websocket.NewHub()
 	go wsHub.Run()
 
-	router.GET("/ws", handlers.WebSocketHandler(wsHub))
+	router.GET("/ws", socketHandler.WebSocketHandler(wsHub))
 	router.POST("/ws/messages", socketHandler.WebSocketMessageHandler(wsHub))
 	router.PATCH("/ws/messages/:messageId", socketHandler.WebScoketEditMessageHandler(wsHub))
 	router.DELETE("/ws/messages/:messageId", socketHandler.WebScoketDeleteMessageHandler(wsHub))

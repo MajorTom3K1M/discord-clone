@@ -37,7 +37,22 @@ func NewPeerConnectionState(c *Client, channel string) (*PeerConnectionState, er
 	if _, ok := c.Hub.TrackChannels[channel]; !ok {
 		c.Hub.TrackChannels[channel] = make(map[string]*webrtc.TrackLocalStaticRTP)
 	}
-	c.Hub.PeerChannels[channel] = append(c.Hub.PeerChannels[channel], PeerConnectionState{peerConnection, c, make([]webrtc.ICECandidateInit, 0), false, channel})
+
+	if _, ok := c.Hub.PeerChannels[channel]; !ok {
+		c.Hub.PeerChannels[channel] = make(map[*PeerConnectionState]bool)
+		// c.Hub.PeerChannels[serverId] = make(map[string]map[*PeerConnectionState]bool)
+	}
+
+	peerConnectionState := &PeerConnectionState{
+		peerConnection:       peerConnection,
+		client:               c,
+		pendingCandidates:    make([]webrtc.ICECandidateInit, 0),
+		remoteDescriptionSet: false,
+		currentChannel:       channel,
+	}
+
+	// Add the new PeerConnectionState to PeerChannels
+	c.Hub.PeerChannels[channel][peerConnectionState] = true
 	c.Hub.Unlock()
 
 	peerConnection.OnICECandidate(func(i *webrtc.ICECandidate) {
@@ -59,7 +74,6 @@ func NewPeerConnectionState(c *Client, channel string) (*PeerConnectionState, er
 				Data: string(candidateString),
 			},
 		})
-
 		c.Unlock()
 	})
 
@@ -118,9 +132,9 @@ func (ps *PeerConnectionState) closePeerConnection() {
 
 	ps.client.Hub.Lock()
 	defer ps.client.Hub.Unlock()
-	for i, pcState := range ps.client.Hub.PeerChannels[ps.currentChannel] {
+	for pcState := range ps.client.Hub.PeerChannels[ps.currentChannel] {
 		if pcState.peerConnection == ps.peerConnection {
-			ps.client.Hub.PeerChannels[ps.currentChannel] = append(ps.client.Hub.PeerChannels[ps.currentChannel][:i], ps.client.Hub.PeerChannels[ps.currentChannel][i+1:]...)
+			delete(ps.client.Hub.PeerChannels[ps.currentChannel], pcState)
 			break
 		}
 	}
@@ -175,7 +189,8 @@ func (ps *PeerConnectionState) initNewPeerConnection(channel string) error {
 	if _, ok := ps.client.Hub.TrackChannels[channel]; !ok {
 		ps.client.Hub.TrackChannels[channel] = make(map[string]*webrtc.TrackLocalStaticRTP)
 	}
-	ps.client.Hub.PeerChannels[channel] = append(ps.client.Hub.PeerChannels[channel], *ps)
+
+	ps.client.Hub.PeerChannels[channel][ps] = true
 	ps.client.Hub.Unlock()
 
 	log.Printf("Setting up event handlers for peer connection in channel %s", channel)
@@ -313,15 +328,15 @@ func (h *Hub) signalPeerConnections(channel string) {
 	}()
 
 	attemptSync := func() (tryAgain bool) {
-		for i := range h.PeerChannels[channel] {
-			if h.PeerChannels[channel][i].peerConnection.ConnectionState() == webrtc.PeerConnectionStateClosed {
-				h.PeerChannels[channel] = append(h.PeerChannels[channel][:i], h.PeerChannels[channel][i+1:]...)
+		for pcState := range h.PeerChannels[channel] {
+			if pcState.peerConnection.ConnectionState() == webrtc.PeerConnectionStateClosed {
+				delete(h.PeerChannels[channel], pcState)
 				return true
 			}
 
 			existingSenders := map[string]bool{}
 
-			for _, sender := range h.PeerChannels[channel][i].peerConnection.GetSenders() {
+			for _, sender := range pcState.peerConnection.GetSenders() {
 				if sender.Track() == nil {
 					continue
 				}
@@ -329,13 +344,13 @@ func (h *Hub) signalPeerConnections(channel string) {
 				existingSenders[sender.Track().ID()] = true
 
 				if _, ok := h.TrackChannels[channel][sender.Track().ID()]; !ok {
-					if err := h.PeerChannels[channel][i].peerConnection.RemoveTrack(sender); err != nil {
+					if err := pcState.peerConnection.RemoveTrack(sender); err != nil {
 						return true
 					}
 				}
 			}
 
-			for _, receiver := range h.PeerChannels[channel][i].peerConnection.GetReceivers() {
+			for _, receiver := range pcState.peerConnection.GetReceivers() {
 				if receiver.Track() == nil {
 					continue
 				}
@@ -345,18 +360,18 @@ func (h *Hub) signalPeerConnections(channel string) {
 
 			for trackID := range h.TrackChannels[channel] {
 				if _, ok := existingSenders[trackID]; !ok {
-					if _, err := h.PeerChannels[channel][i].peerConnection.AddTrack(h.TrackChannels[channel][trackID]); err != nil {
+					if _, err := pcState.peerConnection.AddTrack(h.TrackChannels[channel][trackID]); err != nil {
 						return true
 					}
 				}
 			}
 
-			offer, err := h.PeerChannels[channel][i].peerConnection.CreateOffer(nil)
+			offer, err := pcState.peerConnection.CreateOffer(nil)
 			if err != nil {
 				return true
 			}
 
-			if err = h.PeerChannels[channel][i].peerConnection.SetLocalDescription(offer); err != nil {
+			if err = pcState.peerConnection.SetLocalDescription(offer); err != nil {
 				return true
 			}
 
@@ -365,7 +380,8 @@ func (h *Hub) signalPeerConnections(channel string) {
 				return true
 			}
 
-			currentClient := h.PeerChannels[channel][i].client
+			currentClient := pcState.client
+			currentClient.Lock()
 			currentClient.Hub.SendToClient(
 				currentClient,
 				Message{
@@ -376,8 +392,8 @@ func (h *Hub) signalPeerConnections(channel string) {
 					},
 				},
 			)
+			currentClient.Unlock()
 		}
-
 		return
 	}
 
@@ -400,13 +416,13 @@ func (h *Hub) dispatchKeyFrame(channel string) {
 	h.Lock()
 	defer h.Unlock()
 
-	for i := range h.PeerChannels[channel] {
-		for _, receiver := range h.PeerChannels[channel][i].peerConnection.GetReceivers() {
+	for state := range h.PeerChannels[channel] {
+		for _, receiver := range state.peerConnection.GetReceivers() {
 			if receiver.Track() == nil {
 				continue
 			}
 
-			_ = h.PeerChannels[channel][i].peerConnection.WriteRTCP([]rtcp.Packet{
+			_ = state.peerConnection.WriteRTCP([]rtcp.Packet{
 				&rtcp.PictureLossIndication{
 					MediaSSRC: uint32(receiver.Track().SSRC()),
 				},

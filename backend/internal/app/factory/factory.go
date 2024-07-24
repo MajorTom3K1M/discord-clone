@@ -84,7 +84,8 @@ func (f *Factory) NewWebsocketHandler() *handlers.WebsocketHandler {
 	channelService := f.NewChannelService()
 	messageService := f.NewMessageService()
 	directMessageService := f.NewDirectMessageService()
-	return handlers.NewWebsocketHandler(serverService, conversationService, channelService, messageService, directMessageService)
+	profileService := f.NewProfileService()
+	return handlers.NewWebsocketHandler(serverService, conversationService, channelService, messageService, directMessageService, profileService)
 }
 
 func (f *Factory) NewMessageHandler() *handlers.MessageHandler {

@@ -7,19 +7,29 @@ interface Message {
     type: string;
     channel: string;
     content: {
-        data?: string
-    };
+        data?: string;
+        username?: string;
+        streamId?: string;
+        imageURL?: string;
+    } | {
+        data?: string;
+        username?: string;
+        streamId?: string;
+        imageURL?: string;
+    }[];
 }
 
 interface ChannelConfig {
-    channel: string
+    channel: string;
+    serverId: string;
 }
 
 
-export const useWebRTC = ({ channel }: ChannelConfig) => {
+export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
     const { socket, isConnected, sendWebRTCMessage } = useWebSocket();
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStreams, setRemoteStreams] = useState<MediaStream[]>([]);
+    const [participant, setParticipant] = useState<Map<string, { data?: string, username: string, streamId: string }>>(new Map());
     const [isReady, setIsReady] = useState<boolean>(false);
 
     const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -51,6 +61,9 @@ export const useWebRTC = ({ channel }: ChannelConfig) => {
                 case 'candidate':
                     handleCandidateMessage(message);
                     break;
+                case 'participant':
+                    handleParticipantMessage(message);
+                    break;
                 default:
                     console.log('Unknown message type:', message.type);
             }
@@ -70,7 +83,7 @@ export const useWebRTC = ({ channel }: ChannelConfig) => {
     useEffect(() => {
         if (isReady && isConnected) {
             console.log("Send initializeCall");
-            sendWebRTCMessage('initializeCall', channel, {});
+            sendWebRTCMessage('initializeCall', channel, { streamId: localStream?.id, serverId: serverId });
         }
     }, [isReady, isConnected])
 
@@ -78,7 +91,7 @@ export const useWebRTC = ({ channel }: ChannelConfig) => {
         pcRef.current = new RTCPeerConnection(configuration);
 
         pcRef.current.ontrack = (event) => {
-            console.log("ontrack");
+            console.log("ontrack ", event);
             if (event.track.kind === 'video') {
                 setRemoteStreams(prevStreams => [...prevStreams, event.streams[0]]);
             }
@@ -110,11 +123,23 @@ export const useWebRTC = ({ channel }: ChannelConfig) => {
             pcRef.current!.addTrack(track, stream)
             setIsReady(true);
         });
+    };
 
-        // sendWebRTCMessage('initializeCall', channel, {});
+    const handleParticipantMessage = async (message: Message) => {
+        if (!Array.isArray(message.content))
+            return console.log('Failed to parse participant');
+
+        const participantMap = message.content.reduce((participant, cur) => {
+            if (!participant.has(cur.streamId)) participant.set(cur.streamId, cur);
+            return participant;
+        }, new Map())
+        setParticipant(participantMap)
     };
 
     const handleOfferMessage = async (message: Message) => {
+        if (Array.isArray(message.content))
+            return console.log('Failed to parse offer');
+
         const offer = message.content.data;
         if (!offer) {
             return console.log('Failed to parse offer');
@@ -129,6 +154,9 @@ export const useWebRTC = ({ channel }: ChannelConfig) => {
     };
 
     const handleCandidateMessage = (message: Message) => {
+        if (Array.isArray(message.content))
+            return console.log('Failed to parse candidate');
+
         const candidate = message.content.data;
         if (!candidate) {
             return console.log('Failed to parse candidate');
@@ -136,5 +164,5 @@ export const useWebRTC = ({ channel }: ChannelConfig) => {
         pcRef.current!.addIceCandidate(JSON.parse(candidate));
     };
 
-    return { joinChannel, localStream, remoteStreams, isConnected, peerConnection: pcRef }
+    return { joinChannel, localStream, remoteStreams, participant, isConnected, peerConnection: pcRef }
 };

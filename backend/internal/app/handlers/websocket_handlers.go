@@ -21,6 +21,7 @@ type WebsocketHandler struct {
 	ChannelService       *services.ChannelService
 	MessageService       *services.MessageService
 	DirectMessageService *services.DirectMessageService
+	ProfileService       *services.ProfileService
 }
 
 func NewWebsocketHandler(
@@ -29,6 +30,7 @@ func NewWebsocketHandler(
 	channelService *services.ChannelService,
 	messageService *services.MessageService,
 	directMessageService *services.DirectMessageService,
+	profileService *services.ProfileService,
 ) *WebsocketHandler {
 	return &WebsocketHandler{
 		ServerService:        serverService,
@@ -36,6 +38,7 @@ func NewWebsocketHandler(
 		ChannelService:       channelService,
 		MessageService:       messageService,
 		DirectMessageService: directMessageService,
+		ProfileService:       profileService,
 	}
 }
 
@@ -43,7 +46,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-func WebSocketHandler(hub *ws.Hub) gin.HandlerFunc {
+func (h *WebsocketHandler) WebSocketHandler(hub *ws.Hub) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
@@ -69,7 +72,25 @@ func WebSocketHandler(hub *ws.Hub) gin.HandlerFunc {
 			return
 		}
 
-		client := &ws.Client{Hub: hub, Conn: conn, Send: make(chan ws.Message), ID: c.Request.RemoteAddr, ProfileID: profileID}
+		nameInterface, exists := c.Get("name")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "name not found"})
+			return
+		}
+
+		name, ok := nameInterface.(string)
+		if !ok {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid name format"})
+			return
+		}
+
+		profile, err := h.ProfileService.GetProfileByID(profileID)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+			return
+		}
+
+		client := &ws.Client{Hub: hub, Conn: conn, Send: make(chan ws.Message), ID: c.Request.RemoteAddr, ProfileID: profileID, Username: name, ImageURL: profile.ImageURL}
 		hub.Register <- client
 
 		go client.ReadPump()

@@ -101,6 +101,8 @@ export interface Conversation {
 }
 
 export interface WebRTCMessage {
-    candidate?: RTCIceCandidate,
+    candidate?: RTCIceCandidate
     answer?: RTCLocalSessionDescriptionInit
+    streamId?: string
+    serverId?: string
 }
