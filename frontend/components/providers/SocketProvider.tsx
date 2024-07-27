@@ -7,7 +7,9 @@ import { channel } from 'diagnostics_channel';
 
 type WebSocketContextType = {
     send: (event: string, data: any) => void;
-    sendWebRTCMessage: (type: string, channel: string, message: WebRTCMessage) => void,
+    joinedServer: (serverId: string) => void;
+    leaveServer: (serverId: string, channelId: string) => void;
+    sendWebRTCMessage: (type: string, channel: string, serverId: string, message: WebRTCMessage) => void,
     on: (event: string, handler: (data: any) => void) => void;
     off: (event: string) => void;
     socket: WebSocket | null;
@@ -16,7 +18,9 @@ type WebSocketContextType = {
 
 const WebSocketContext = createContext<WebSocketContextType>({
     send: (event: string, data: any) => { },
-    sendWebRTCMessage: (type: string, channel: string, message: WebRTCMessage) => {},
+    joinedServer: (serverId: string) => { },
+    leaveServer: (serverId: string, channelId: string) => { },
+    sendWebRTCMessage: (type: string, channel: string, serverId: string, message: WebRTCMessage) => {},
     on: (event: string, handler: (data: any) => void) => { },
     off: (event: string) => { },
     socket: null,
@@ -97,6 +101,20 @@ export const WebSocketProvider = ({
         }
     };
 
+    const joinedServer = (serverId: string) => {
+        if (socket?.readyState === WebSocket.OPEN) {
+            console.log({ type: "joined", serverId: serverId });
+            socket.send(JSON.stringify({ type: "joined", serverId }));
+        }
+    }
+
+    const leaveServer = (serverId: string, channelId: string) => {
+        if (socket?.readyState === WebSocket.OPEN) {
+            console.log({ type: "leave", serverId: serverId, channelId });
+            socket.send(JSON.stringify({ type: "leave", serverId, channel: channelId }));
+        }
+    }
+
     const on = (event: string, handler: (data: any) => void) => {
         if (!listeners.current.has(event)) {
             if (socket?.readyState === WebSocket.OPEN) {
@@ -119,15 +137,15 @@ export const WebSocketProvider = ({
         }
     };
 
-    const sendWebRTCMessage = (type: string, channel: string, message: WebRTCMessage) => {
+    const sendWebRTCMessage = (type: string, channel: string, serverId: string, message: WebRTCMessage) => {
         if (socket?.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ type: type, channel: channel, content: message }));
+            socket.send(JSON.stringify({ type: type, serverId: serverId, channel: channel, content: message }));
         }
     }
 
     return (
         <WebSocketContext.Provider value={{ 
-            send, on, off, socket, isConnected,  sendWebRTCMessage
+            send, on, off, socket, isConnected,  sendWebRTCMessage, joinedServer, leaveServer
         }}>
             {children}
         </WebSocketContext.Provider>

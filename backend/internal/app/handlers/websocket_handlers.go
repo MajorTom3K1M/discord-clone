@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -715,6 +716,22 @@ func (h *WebsocketHandler) WebSocketDeleteDirectMessageHandler(hub *ws.Hub) gin.
 		hub.BroadcastToChannel(msg)
 
 		c.JSON(http.StatusOK, gin.H{"message": "Message updated successfully", "data": directMessage})
+	}
+}
+
+func (h *WebsocketHandler) WebSocketGetParticipants(hub *ws.Hub) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		paramServerID := c.Param("serverId")
+		log.Println("participants called Server ID: ", paramServerID)
+
+		hub.BroadcastToServer(ws.Message{
+			Type:     "participants",
+			Channel:  "",
+			ServerID: paramServerID,
+			Content:  hub.GetUsersFromPeerChannelsServer(paramServerID),
+		})
+
+		c.JSON(http.StatusOK, gin.H{"message": "Request participants successfully"})
 	}
 }
 

@@ -36,12 +36,13 @@ type ContentData struct {
 	Username string `json:"username,omitempty"`
 	StreamID string `json:"streamId,omitempty"`
 	ImageURL string `json:"imageURL,omitempty"`
+	ClientID string `json:"clientId,omitempty"`
 }
 
 type Message struct {
 	Type     string           `json:"type"`
 	Channel  string           `json:"channel,omitempty"`
-	ServerID string           `json:"channel,omitempty"`
+	ServerID string           `json:"serverId,omitempty"`
 	Content  ContentInterface `json:"content,omitempty"`
 }
 
@@ -95,6 +96,30 @@ func (c *Client) ReadPump() {
 		}
 
 		switch msg.Type {
+		case "joined":
+			if msg.ServerID != "" {
+				if _, ok := c.Hub.Servers[msg.ServerID]; !ok {
+					c.Hub.Servers[msg.ServerID] = make(map[*Client]bool)
+				}
+
+				c.Hub.Servers[msg.ServerID][c] = true
+
+				c.Send <- Message{
+					Type:     "participants",
+					ServerID: msg.ServerID,
+					Content:  c.Hub.GetUsersFromPeerChannelsServer(msg.ServerID),
+				}
+
+				log.Printf("Client %s joined to server %s", c.ID, msg.ServerID)
+			}
+		case "participants":
+			if msg.ServerID != "" {
+				c.Hub.BroadcastServer <- Message{
+					Type:     "participants",
+					ServerID: msg.ServerID,
+					Content:  c.Hub.GetUsersFromPeerChannelsServer(msg.ServerID),
+				}
+			}
 		case "subscribe":
 			if msg.Channel != "" {
 				if _, ok := c.Hub.Channels[msg.Channel]; !ok {
@@ -117,26 +142,23 @@ func (c *Client) ReadPump() {
 			c.Hub.BroadcastToChannel(msg)
 		case "initializeCall":
 			if c.PeerConnectionState == nil {
-				log.Printf("Client %s initializeCall", msg.Channel)
+				log.Printf("Client %s in Server %s initializeCall", msg.Channel, msg.ServerID)
 				webrtcMsg := msg.Content.(WebRTCMessage)
 				c.StreamID = webrtcMsg.StreamID
-				c.PeerConnectionState, err = NewPeerConnectionState(c, msg.Channel)
+				c.PeerConnectionState, err = NewPeerConnectionState(c, msg.ServerID, msg.Channel)
 				if err != nil {
 					log.Println("Error creating PeerConnection:", err)
 					continue
 				}
-				// c.PeerConnectionState.streamID = webrtcMsg.StreamID
 			} else if c.PeerConnectionState.currentChannel != msg.Channel {
 				log.Printf("Client %s changing channel from %s to %s", c.ID, c.PeerConnectionState.currentChannel, msg.Channel)
 				webrtcMsg := msg.Content.(WebRTCMessage)
 				c.StreamID = webrtcMsg.StreamID
-				err = c.PeerConnectionState.ChangeChannel(msg.Channel)
+				c.PeerConnectionState, err = c.ChangeChannel(msg.ServerID, msg.Channel)
 				if err != nil {
 					log.Println("Error changing channel:", err)
 					continue
 				}
-				// webrtcMsg := msg.Content.(WebRTCMessage)
-				// c.PeerConnectionState.streamID = webrtcMsg.StreamID
 			}
 		case "answer":
 			if c.PeerConnectionState != nil {
@@ -152,10 +174,40 @@ func (c *Client) ReadPump() {
 					log.Println("Failed to add ICE candidate:", err)
 				}
 
-				c.Hub.BroadcastToPeerChannel(Message{
-					Type:    "participant",
-					Channel: msg.Channel,
-					Content: c.Hub.GetUsersFromPeerChannel(msg.Channel),
+				c.Hub.BroadcastToServer(Message{
+					Type:     "participant",
+					Channel:  msg.Channel,
+					ServerID: msg.ServerID,
+					Content: &ContentData{
+						Data:     "joined",
+						Username: c.Username,
+						StreamID: c.StreamID,
+						ImageURL: c.ImageURL,
+						ClientID: c.ID,
+					},
+				})
+			}
+		case "leave":
+			if msg.ServerID != "" {
+				if clients, ok := c.Hub.Servers[msg.ServerID]; ok {
+					delete(clients, c)
+					if len(clients) == 0 {
+						delete(c.Hub.Servers, msg.ServerID)
+					}
+					log.Printf("Client %s unsubscribed from server %s", c.ID, msg.ServerID)
+				}
+
+				c.Hub.BroadcastToServer(Message{
+					Type:     "participant",
+					Channel:  msg.Channel,
+					ServerID: msg.ServerID,
+					Content: &ContentData{
+						Data:     "left",
+						Username: c.Username,
+						StreamID: c.StreamID,
+						ImageURL: c.ImageURL,
+						ClientID: c.ID,
+					},
 				})
 			}
 		default:

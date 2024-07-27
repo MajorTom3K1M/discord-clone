@@ -19,6 +19,7 @@ import { ServerChannel } from './ServerChannel';
 import { ServerMember } from './ServerMember';
 import { UserAvatar } from '../UserAvatar';
 import { ServerChannelMember } from './ServerChannelMember';
+import { useWebRTC } from '@/hooks/useWebRTC';
 
 interface ServerSidebarProps {
     serverId: string;
@@ -164,11 +165,13 @@ export const ServerSidebar = async ({
                                         role={role}
                                         server={server}
                                     />
-                                    <ServerChannelMember 
+                                    {/* <ServerChannelMember 
                                         className='pl-8 pb-2'
-                                        src='https://cdn.discordapp.com/avatars/293021833350086656/8b125db71d831bd62fb80818bc574777.webp'
-                                        name={'MajorTom'}
-                                    />
+                                        channel={channel}
+                                        serverId={serverId}
+                                        // src='https://cdn.discordapp.com/avatars/293021833350086656/8b125db71d831bd62fb80818bc574777.webp'
+                                        // name={'MajorTom'}
+                                    /> */}
                                     {/* <div className='pl-8 pb-2 text-zinc-500 dark:text-zinc-400 
                                         hover:text-zinc-600 dark:hover:text-zinc-300 transition
                                         text-[14px]'
@@ -198,12 +201,19 @@ export const ServerSidebar = async ({
                         />
                         <div className="space-y-[2px]">
                             {videoChannels.map((channel) => (
-                                <ServerChannel
-                                    key={channel.id}
-                                    channel={channel}
-                                    role={role}
-                                    server={server}
-                                />
+                                <div className='flex flex-col' key={channel.id}>
+                                    <ServerChannel
+                                        key={channel.id}
+                                        channel={channel}
+                                        role={role}
+                                        server={server}
+                                    />
+                                    <ServerChannelMember 
+                                        className='pl-8 pb-2'
+                                        channel={channel}
+                                        serverId={serverId}
+                                    />
+                                </div>
                             ))}
                         </div>
                     </div>

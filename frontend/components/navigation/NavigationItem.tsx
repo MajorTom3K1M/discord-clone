@@ -1,10 +1,16 @@
 "use client"
 import Image from "next/image";
 
+import axios from "@/utils/axios";
+
 import { useParams, useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { ActionTooltip } from "@/components/ActionTooltip";
+import { useEffect, useRef } from "react";
+import { useWebSocket } from "../providers/SocketProvider";
+import { useParticipantSocket } from "@/hooks/useParticipantSocket";
+import { join } from "node:path";
 
 interface NavigationItemProps {
     id: string;
@@ -17,8 +23,26 @@ export const NavigationItem = ({
     imageUrl,
     name
 }: NavigationItemProps) => {
+    const { isConnected, joinedServer } = useWebSocket();
     const params = useParams();
     const router = useRouter();
+    const isFirstTime = useRef(true);
+
+    const getParticipants = async (serverId: string) => {
+        try {
+            console.log("Joining server : ", serverId);
+            joinedServer(serverId);
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    useEffect(() => {
+        if (isConnected && params?.serverId === id && isFirstTime.current) {
+            getParticipants(id);
+            isFirstTime.current = false;
+        }
+    }, [isConnected]);
 
     const onClick = () => {
         router.push(`/servers/${id}`);

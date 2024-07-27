@@ -11,12 +11,19 @@ interface Message {
         username?: string;
         streamId?: string;
         imageURL?: string;
-    } | {
-        data?: string;
-        username?: string;
-        streamId?: string;
-        imageURL?: string;
-    }[];
+    }
+}
+
+interface ParticipantMessage {
+    type: string;
+    channel: string;
+    content: Map<string,
+        Map<string, {
+            username?: string;
+            streamId?: string;
+            imageURL?: string;
+        }>
+    >
 }
 
 interface ChannelConfig {
@@ -29,7 +36,7 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
     const { socket, isConnected, sendWebRTCMessage } = useWebSocket();
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStreams, setRemoteStreams] = useState<MediaStream[]>([]);
-    const [participant, setParticipant] = useState<Map<string, { data?: string, username: string, streamId: string }>>(new Map());
+    const [participant, setParticipant] = useState<Map<string, Map<string, { username: string; streamId?: string; imageURL?: string; }>>>(new Map());
     const [isReady, setIsReady] = useState<boolean>(false);
 
     const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -61,17 +68,16 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
                 case 'candidate':
                     handleCandidateMessage(message);
                     break;
-                case 'participant':
-                    handleParticipantMessage(message);
-                    break;
+                // case 'participant':
+                //     handleParticipantMessage(JSON.parse(event.data));
+                //     break;
                 default:
                     console.log('Unknown message type:', message.type);
             }
         };
 
         if (isConnected) {
-            joinChannel();
-
+            // joinChannel();
             socket!.addEventListener('message', handleMessage);
 
             return () => {
@@ -83,7 +89,7 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
     useEffect(() => {
         if (isReady && isConnected) {
             console.log("Send initializeCall");
-            sendWebRTCMessage('initializeCall', channel, { streamId: localStream?.id, serverId: serverId });
+            sendWebRTCMessage('initializeCall', channel, serverId, { streamId: localStream?.id });
         }
     }, [isReady, isConnected])
 
@@ -104,7 +110,7 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
         pcRef.current.onicecandidate = (event) => {
             if (event.candidate) {
                 console.log('ICE candidate:', event.candidate);
-                sendWebRTCMessage('candidate', channel, { candidate: event.candidate });
+                sendWebRTCMessage('candidate', channel, serverId, { candidate: event.candidate });
             }
         };
     };
@@ -125,15 +131,14 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
         });
     };
 
-    const handleParticipantMessage = async (message: Message) => {
-        if (!Array.isArray(message.content))
-            return console.log('Failed to parse participant');
-
-        const participantMap = message.content.reduce((participant, cur) => {
-            if (!participant.has(cur.streamId)) participant.set(cur.streamId, cur);
-            return participant;
-        }, new Map())
-        setParticipant(participantMap)
+    const handleParticipantMessage = async (message: ParticipantMessage) => {
+        const channelMap = new Map<string, Map<string, { username: string, streamId: string, imageURL: string }>>(
+            Object.entries(message.content).map(([channelId, streams]) => [
+                channelId,
+                new Map<string, { username: string, streamId: string, imageURL: string }>(Object.entries(streams)),
+            ])
+        );
+        setParticipant(channelMap);
     };
 
     const handleOfferMessage = async (message: Message) => {
@@ -150,7 +155,7 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
         const answer = await pcRef.current!.createAnswer();
         await pcRef.current!.setLocalDescription(answer);
 
-        sendWebRTCMessage('answer', channel, { answer });
+        sendWebRTCMessage('answer', channel, serverId, { answer });
     };
 
     const handleCandidateMessage = (message: Message) => {

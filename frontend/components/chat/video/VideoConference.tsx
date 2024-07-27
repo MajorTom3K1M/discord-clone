@@ -4,15 +4,12 @@ import { useWebRTC } from "@/hooks/useWebRTC";
 import { MediaPanel } from "@/components/chat/video/MediaPanel";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { useEffect } from "react";
 
 interface VideoConferenceProps {
     chatId: string;
     serverId: string;
 }
-
-const useParticipantName = (participant: Map<string, { username: string }>, streamId: string) => {
-    return participant.get(streamId)?.username ?? "";
-};
 
 const getGridClassNames = (participantCount: number) => {
     return cn(
@@ -31,7 +28,11 @@ const getMediaPanelClassNames = (participantCount: number) => {
 
 export const VideoConference = ({ chatId, serverId }: VideoConferenceProps) => {
     const { authState } = useAuth();
-    const { localStream, remoteStreams, participant } = useWebRTC({ channel: chatId, serverId: serverId });
+    const { localStream, remoteStreams, participant, isConnected, joinChannel } = useWebRTC({ channel: chatId, serverId: serverId });
+
+    useEffect(() => {
+        if (isConnected) joinChannel();
+    }, [isConnected]);
 
     const participantCount = remoteStreams.length + 1;
     const gridClassNames = getGridClassNames(participantCount);
@@ -49,7 +50,7 @@ export const VideoConference = ({ chatId, serverId }: VideoConferenceProps) => {
                     <MediaPanel
                         key={remoteStream.id}
                         media={remoteStream}
-                        name={useParticipantName(participant, remoteStream.id)}
+                        name={participant.get(chatId)?.get(remoteStream.id)?.username}
                         className={mediaPanelClassNames}
                     />
                 ))}
