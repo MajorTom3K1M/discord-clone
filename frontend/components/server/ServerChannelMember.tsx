@@ -3,10 +3,7 @@
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "../UserAvatar";
 import { Channel } from "@/types/models";
-import { useWebRTC } from "@/hooks/useWebRTC";
-import { useWebSocket } from "../providers/SocketProvider";
-import { useEffect, useState } from "react";
-import { useParticipantSocket } from "@/hooks/useParticipantSocket";
+import { useParticipant } from "@/components/providers/ParticipantProvider";
 
 interface ServerChannelMemberProps {
     // src: string;
@@ -28,14 +25,7 @@ export const ServerChannelMember = ({
     serverId,
     className
 }: ServerChannelMemberProps) => {
-    const { participant, leaveServer } = useParticipantSocket({ channelId: channel.id, serverId });
-
-    useEffect(() => {
-        return () => {
-            // leaveServer(serverId, channel.id);
-            console.log("leave server : ", channel.name);
-        }
-    }, []);
+    const { participant } = useParticipant();
 
     return (
         <div key={channel.id}>

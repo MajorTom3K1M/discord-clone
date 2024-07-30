@@ -9,8 +9,6 @@ import { cn } from "@/lib/utils";
 import { ActionTooltip } from "@/components/ActionTooltip";
 import { useEffect, useRef } from "react";
 import { useWebSocket } from "../providers/SocketProvider";
-import { useParticipantSocket } from "@/hooks/useParticipantSocket";
-import { join } from "node:path";
 
 interface NavigationItemProps {
     id: string;
@@ -45,6 +43,7 @@ export const NavigationItem = ({
     }, [isConnected]);
 
     const onClick = () => {
+        getParticipants(id);
         router.push(`/servers/${id}`);
     }
 
