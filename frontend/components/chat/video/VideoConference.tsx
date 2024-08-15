@@ -5,6 +5,7 @@ import { MediaPanel } from "@/components/chat/video/MediaPanel";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useEffect } from "react";
+import { useParticipant } from "@/components/providers/ParticipantProvider";
 
 interface VideoConferenceProps {
     chatId: string;
@@ -28,7 +29,8 @@ const getMediaPanelClassNames = (participantCount: number) => {
 
 export const VideoConference = ({ chatId, serverId }: VideoConferenceProps) => {
     const { authState } = useAuth();
-    const { localStream, remoteStreams, participant, isConnected, joinChannel } = useWebRTC({ channel: chatId, serverId: serverId });
+    const { localStream, remoteStreams, isConnected, joinChannel } = useWebRTC({ channel: chatId, serverId: serverId });
+    const { participant } = useParticipant();
 
     useEffect(() => {
         if (isConnected) joinChannel();
@@ -50,7 +52,7 @@ export const VideoConference = ({ chatId, serverId }: VideoConferenceProps) => {
                     <MediaPanel
                         key={remoteStream.id}
                         media={remoteStream}
-                        name={participant.get(chatId)?.get(remoteStream.id)?.username}
+                        name={participant[chatId]?.find((p) => p.streamId === remoteStream.id)?.username}
                         className={mediaPanelClassNames}
                     />
                 ))}

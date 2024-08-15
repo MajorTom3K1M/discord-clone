@@ -102,21 +102,33 @@ func (h *Hub) BroadcastToChannel(msg Message) {
 	}
 }
 
-func (h *Hub) SendToClient(client *Client, msg Message) {
-	if pcStates, ok := h.PeerChannels[msg.ServerID][msg.Channel]; ok {
-		for state := range pcStates {
-			if state.client == client {
-				select {
-				case state.client.Send <- msg:
-				default:
-					close(state.client.Send)
-					delete(h.Clients, state.client)
+// func (h *Hub) SendToClient(client *Client, msg Message) {
+// 	if pcStates, ok := h.PeerChannels[msg.ServerID][msg.Channel]; ok {
+// 		for state := range pcStates {
+// 			if state.client == client {
+// 				select {
+// 				case state.client.Send <- msg:
+// 				default:
+// 					close(state.client.Send)
+// 					delete(h.Clients, state.client)
 
-					delete(h.PeerChannels[msg.ServerID][msg.Channel], state)
-				}
-				return
-			}
-		}
+// 					delete(h.PeerChannels[msg.ServerID][msg.Channel], state)
+// 				}
+// 				return
+// 			}
+// 		}
+// 	}
+// }
+
+func (h *Hub) SendToClient(client *Client, msg Message) {
+	client.Lock()
+	defer client.Unlock()
+	select {
+	case client.Send <- msg:
+	default:
+		close(client.Send)
+		delete(h.Clients, client)
+		delete(h.PeerChannels[msg.ServerID][msg.Channel], client.PeerConnectionState)
 	}
 }
 
@@ -222,59 +234,3 @@ func (h *Hub) GetUsersFromPeerChannelsServer(serverId string) map[string]map[str
 
 	return users
 }
-
-// func (h *Hub) BroadcastToPeerChannel(msg Message) {
-// 	if pcState, ok := h.PeerChannels[msg.Channel]; ok {
-// 		for state := range pcState {
-// 			select {
-// 			case state.client.Send <- msg:
-// 			default:
-// 				close(state.client.Send)
-// 				delete(h.Clients, state.client)
-// 				for ch := range h.PeerChannels {
-// 					delete(h.PeerChannels[ch], state)
-// 				}
-// 			}
-// 		}
-// 	} else {
-// 		log.Printf("No subscribers in channel: %s", msg.Channel)
-// 	}
-// }
-
-// func (h *Hub) SendToClient(client *Client, msg Message) {
-// 	if pcStates, ok := h.PeerChannels[msg.Channel]; ok {
-// 		for state := range pcStates {
-// 			if state.client == client {
-// 				select {
-// 				case state.client.Send <- msg:
-// 				default:
-// 					close(state.client.Send)
-// 					delete(h.Clients, state.client)
-// 					for ch := range h.PeerChannels {
-// 						delete(h.PeerChannels[ch], state)
-// 					}
-// 				}
-// 				return
-// 			}
-// 		}
-// 	}
-// }
-
-// func (h *Hub) GetUsersFromPeerChannel(channel string) []ContentData {
-// 	h.RLock()
-// 	defer h.RUnlock()
-
-// 	var users []ContentData
-// 	if peerConnStates, ok := h.PeerChannels[channel]; ok {
-// 		for peerConnState := range peerConnStates {
-// 			if peerConnState.client != nil {
-// 				users = append(users, ContentData{
-// 					Username: peerConnState.client.Username,
-// 					StreamID: peerConnState.client.StreamID,
-// 					ImageURL: peerConnState.client.ImageURL,
-// 				})
-// 			}
-// 		}
-// 	}
-// 	return users
-// }

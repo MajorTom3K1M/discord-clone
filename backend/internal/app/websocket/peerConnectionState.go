@@ -71,7 +71,6 @@ func NewPeerConnectionState(c *Client, serverId string, channel string) (*PeerCo
 			return
 		}
 
-		c.Lock()
 		c.Hub.SendToClient(c, Message{
 			Type:     "candidate",
 			Channel:  channel,
@@ -80,7 +79,6 @@ func NewPeerConnectionState(c *Client, serverId string, channel string) (*PeerCo
 				Data: string(candidateString),
 			},
 		})
-		c.Unlock()
 	})
 
 	peerConnection.OnConnectionStateChange(func(p webrtc.PeerConnectionState) {
@@ -232,9 +230,6 @@ func (ps *PeerConnectionState) initNewPeerConnection(serverId string, channel st
 			log.Printf("Error marshaling ICE candidate: %v", err)
 			return
 		}
-
-		ps.client.Lock()
-		defer ps.client.Unlock()
 
 		ps.client.Hub.SendToClient(ps.client, Message{
 			Type:     "candidate",
@@ -418,7 +413,6 @@ func (h *Hub) signalPeerConnections(serverId, channel string) {
 			}
 
 			currentClient := pcState.client
-			currentClient.Lock()
 			currentClient.Hub.SendToClient(
 				currentClient,
 				Message{
@@ -430,7 +424,6 @@ func (h *Hub) signalPeerConnections(serverId, channel string) {
 					},
 				},
 			)
-			currentClient.Unlock()
 		}
 		return
 	}
@@ -451,7 +444,6 @@ func (h *Hub) signalPeerConnections(serverId, channel string) {
 }
 
 func (h *Hub) dispatchKeyFrame(serverId, channel string) {
-	log.Printf("ServerID : %s, Channel : %s", serverId, channel)
 	h.Lock()
 	defer h.Unlock()
 

@@ -57,7 +57,7 @@ export const WebSocketProvider = ({
             return;
         }
 
-        const ws = new WebSocket("ws://localhost:8080/ws");
+        const ws = new WebSocket(process.env.NEXT_PUBLIC_SOCKET_URL as string);
 
         ws.onopen = () => {
             console.log('WebSocket connection established.');

@@ -174,7 +174,7 @@ func (c *Client) ReadPump() {
 					log.Println("Failed to add ICE candidate:", err)
 				}
 
-				c.Hub.BroadcastToServer(Message{
+				c.Hub.BroadcastServer <- Message{
 					Type:     "participant",
 					Channel:  msg.Channel,
 					ServerID: msg.ServerID,
@@ -185,7 +185,7 @@ func (c *Client) ReadPump() {
 						ImageURL: c.ImageURL,
 						ClientID: c.ID,
 					},
-				})
+				}
 			}
 		case "leave":
 			if msg.ServerID != "" {
@@ -197,7 +197,7 @@ func (c *Client) ReadPump() {
 					log.Printf("Client %s unsubscribed from server %s", c.ID, msg.ServerID)
 				}
 
-				c.Hub.BroadcastToServer(Message{
+				c.Hub.BroadcastServer <- Message{
 					Type:     "participant",
 					Channel:  msg.Channel,
 					ServerID: msg.ServerID,
@@ -208,12 +208,16 @@ func (c *Client) ReadPump() {
 						ImageURL: c.ImageURL,
 						ClientID: c.ID,
 					},
-				})
+				}
 			}
 		default:
 			log.Printf("Unknown message type received: %v", msg.Type)
 		}
+
+		// log.Printf("Received message: %v", msg.Type)
 	}
+
+	log.Println("Exiting WebSocket read loop")
 }
 
 func (c *Client) WritePump() {

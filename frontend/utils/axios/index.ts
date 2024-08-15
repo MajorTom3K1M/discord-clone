@@ -2,7 +2,7 @@ import axios from 'axios';
 import { setupInterceptors } from './interceptors';
 
 const axiosInstance = axios.create({
-    baseURL: 'http://localhost:8080',
+    baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
     withCredentials: true
 });
 

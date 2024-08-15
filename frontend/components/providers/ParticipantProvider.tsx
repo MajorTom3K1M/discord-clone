@@ -70,6 +70,18 @@ export const ParticipantProvider = ({
         setParticipant((prevParticipant) => {
             let newParticipant = prevParticipant[channelId] ?? [];
 
+            const isParticipantExist = (p: Participant) => String(p.clientId) === String(participant.clientId);
+
+            if (newParticipant?.some(isParticipantExist)) {
+                if (participant.data === 'left') {
+                    return {
+                        ...prevParticipant,
+                        [channelId]: newParticipant.filter((p) => p.clientId !== participant.clientId)
+                    };
+                }
+
+            }
+            
             newParticipant = [...newParticipant.filter((p) => p.clientId !== participant.clientId), participant];
 
             return {

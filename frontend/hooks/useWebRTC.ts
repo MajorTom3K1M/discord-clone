@@ -36,7 +36,6 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
     const { socket, isConnected, sendWebRTCMessage } = useWebSocket();
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStreams, setRemoteStreams] = useState<MediaStream[]>([]);
-    const [participant, setParticipant] = useState<Map<string, Map<string, { username: string; streamId?: string; imageURL?: string; }>>>(new Map());
     const [isReady, setIsReady] = useState<boolean>(false);
 
     const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -68,9 +67,6 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
                 case 'candidate':
                     handleCandidateMessage(message);
                     break;
-                // case 'participant':
-                //     handleParticipantMessage(JSON.parse(event.data));
-                //     break;
                 default:
                     console.log('Unknown message type:', message.type);
             }
@@ -131,16 +127,6 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
         });
     };
 
-    const handleParticipantMessage = async (message: ParticipantMessage) => {
-        const channelMap = new Map<string, Map<string, { username: string, streamId: string, imageURL: string }>>(
-            Object.entries(message.content).map(([channelId, streams]) => [
-                channelId,
-                new Map<string, { username: string, streamId: string, imageURL: string }>(Object.entries(streams)),
-            ])
-        );
-        setParticipant(channelMap);
-    };
-
     const handleOfferMessage = async (message: Message) => {
         if (Array.isArray(message.content))
             return console.log('Failed to parse offer');
@@ -169,5 +155,5 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
         pcRef.current!.addIceCandidate(JSON.parse(candidate));
     };
 
-    return { joinChannel, localStream, remoteStreams, participant, isConnected, peerConnection: pcRef }
+    return { joinChannel, localStream, remoteStreams, isConnected, peerConnection: pcRef }
 };
