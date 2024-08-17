@@ -3,6 +3,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { usePathname, useSearchParams, useRouter, redirect } from 'next/navigation'; // Corrected import
 import axios, { fetchDataWithCancellation, isCancel } from '@/utils/axios';
 import { Loader2 } from 'lucide-react';
+import { profile } from 'console';
 
 const publicPages = ['/sign-in', '/sign-up'];
 
@@ -42,7 +43,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const router = useRouter();
-    const [authState, setAuthState] = useState({
+    const [authState, setAuthState] = useState<AuthState>({
         profile: null
     });
     const isPublicPage = publicPages.includes(pathname);
@@ -64,8 +65,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     const signout = async () => {
-        await axios.post('/signout');
-        setAuthState({ profile: null });
+        const response = await axios.post('/signout', { profileId: authState.profile?.id });
+        if (response.status === 200) {
+            setAuthState({ profile: null });
+            router.push("/sign-in");
+            router.refresh();
+        }
     };
 
     useEffect(() => {

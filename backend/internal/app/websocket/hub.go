@@ -12,14 +12,13 @@ type Hub struct {
 	Clients         map[*Client]bool
 	BroadcastServer chan Message
 	Broadcast       chan Message
+	ClientMessage   chan ClientMessage
 	Register        chan *Client
 	Unregister      chan *Client
 	Channels        map[string]map[*Client]bool
 	Servers         map[string]map[*Client]bool
 	PeerChannels    map[string]map[string]map[*PeerConnectionState]bool
 	TrackChannels   map[string]map[string]*pionwebrtc.TrackLocalStaticRTP
-	// Channels      map[string]map[*Client]bool
-	// PeerChannels map[string]map[*PeerConnectionState]bool
 	sync.RWMutex
 }
 
@@ -27,6 +26,7 @@ func NewHub() *Hub {
 	return &Hub{
 		BroadcastServer: make(chan Message),
 		Broadcast:       make(chan Message),
+		ClientMessage:   make(chan ClientMessage),
 		Register:        make(chan *Client),
 		Unregister:      make(chan *Client),
 		Clients:         make(map[*Client]bool),
@@ -34,7 +34,6 @@ func NewHub() *Hub {
 		Servers:         make(map[string]map[*Client]bool),
 		PeerChannels:    make(map[string]map[string]map[*PeerConnectionState]bool),
 		TrackChannels:   make(map[string]map[string]*webrtc.TrackLocalStaticRTP),
-		// PeerChannels: make(map[string]map[*PeerConnectionState]bool),
 	}
 }
 
@@ -80,6 +79,17 @@ func (h *Hub) Run() {
 					}
 				}
 			}
+		case clientMessage := <-h.ClientMessage:
+			client := clientMessage.Client
+			select {
+			case client.Send <- clientMessage.Message:
+			default:
+				close(client.Send)
+				delete(h.Clients, client)
+				for server := range h.Servers {
+					delete(h.Servers[server], client)
+				}
+			}
 		}
 	}
 }
@@ -102,54 +112,6 @@ func (h *Hub) BroadcastToChannel(msg Message) {
 	}
 }
 
-// func (h *Hub) SendToClient(client *Client, msg Message) {
-// 	if pcStates, ok := h.PeerChannels[msg.ServerID][msg.Channel]; ok {
-// 		for state := range pcStates {
-// 			if state.client == client {
-// 				select {
-// 				case state.client.Send <- msg:
-// 				default:
-// 					close(state.client.Send)
-// 					delete(h.Clients, state.client)
-
-// 					delete(h.PeerChannels[msg.ServerID][msg.Channel], state)
-// 				}
-// 				return
-// 			}
-// 		}
-// 	}
-// }
-
-func (h *Hub) SendToClient(client *Client, msg Message) {
-	client.Lock()
-	defer client.Unlock()
-	select {
-	case client.Send <- msg:
-	default:
-		close(client.Send)
-		delete(h.Clients, client)
-		delete(h.PeerChannels[msg.ServerID][msg.Channel], client.PeerConnectionState)
-	}
-}
-
-func (h *Hub) BroadcastToPeerChannel(msg Message) {
-	if pcState, ok := h.PeerChannels[msg.ServerID][msg.Channel]; ok {
-		for state := range pcState {
-			select {
-			case state.client.Send <- msg:
-			default:
-				close(state.client.Send)
-				delete(h.Clients, state.client)
-				for ch := range h.PeerChannels[msg.ServerID] {
-					delete(h.PeerChannels[msg.ServerID][ch], state)
-				}
-			}
-		}
-	} else {
-		log.Printf("No subscribers in channel: %s", msg.Channel)
-	}
-}
-
 func (h *Hub) BroadcastToServer(msg Message) {
 	h.RLock()
 	defer h.RUnlock()
@@ -162,24 +124,6 @@ func (h *Hub) BroadcastToServer(msg Message) {
 				delete(h.Clients, client)
 				for sv := range h.Servers {
 					delete(h.Servers[sv], client)
-				}
-			}
-		}
-	} else {
-		log.Printf("No subscribers in server: %s", msg.ServerID)
-	}
-}
-
-func (h *Hub) BroadcastToPeerServer(msg Message) {
-	if channels, ok := h.PeerChannels[msg.ServerID]; ok {
-		for ch := range channels {
-			for state := range h.PeerChannels[msg.ServerID][ch] {
-				select {
-				case state.client.Send <- msg:
-				default:
-					close(state.client.Send)
-					delete(h.Clients, state.client)
-					delete(h.PeerChannels[msg.ServerID][ch], state)
 				}
 			}
 		}

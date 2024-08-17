@@ -71,14 +71,17 @@ func NewPeerConnectionState(c *Client, serverId string, channel string) (*PeerCo
 			return
 		}
 
-		c.Hub.SendToClient(c, Message{
-			Type:     "candidate",
-			Channel:  channel,
-			ServerID: serverId,
-			Content: &ContentData{
-				Data: string(candidateString),
+		c.Hub.ClientMessage <- ClientMessage{
+			Client: c,
+			Message: Message{
+				Type:     "candidate",
+				Channel:  channel,
+				ServerID: serverId,
+				Content: &ContentData{
+					Data: string(candidateString),
+				},
 			},
-		})
+		}
 	})
 
 	peerConnection.OnConnectionStateChange(func(p webrtc.PeerConnectionState) {
@@ -231,14 +234,17 @@ func (ps *PeerConnectionState) initNewPeerConnection(serverId string, channel st
 			return
 		}
 
-		ps.client.Hub.SendToClient(ps.client, Message{
-			Type:     "candidate",
-			Channel:  channel,
-			ServerID: serverId,
-			Content: &ContentData{
-				Data: string(candidateString),
+		ps.client.Hub.ClientMessage <- ClientMessage{
+			Client: ps.client,
+			Message: Message{
+				Type:     "candidate",
+				Channel:  channel,
+				ServerID: serverId,
+				Content: &ContentData{
+					Data: string(candidateString),
+				},
 			},
-		})
+		}
 	})
 
 	peerConnection.OnConnectionStateChange(func(p webrtc.PeerConnectionState) {
@@ -413,9 +419,9 @@ func (h *Hub) signalPeerConnections(serverId, channel string) {
 			}
 
 			currentClient := pcState.client
-			currentClient.Hub.SendToClient(
-				currentClient,
-				Message{
+			currentClient.Hub.ClientMessage <- ClientMessage{
+				Client: currentClient,
+				Message: Message{
 					Type:     "offer",
 					Channel:  channel,
 					ServerID: serverId,
@@ -423,7 +429,8 @@ func (h *Hub) signalPeerConnections(serverId, channel string) {
 						Data: string(offerString),
 					},
 				},
-			)
+			}
+
 		}
 		return
 	}

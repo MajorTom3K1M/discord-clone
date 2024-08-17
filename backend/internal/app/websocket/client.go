@@ -25,12 +25,6 @@ type Client struct {
 }
 
 type ContentInterface interface{}
-
-// type Content struct {
-// 	Message string `json:"message"`
-// 	FileUrl string `json:"fileUrl"`
-// }
-
 type ContentData struct {
 	Data     string `json:"data"`
 	Username string `json:"username,omitempty"`
@@ -44,6 +38,11 @@ type Message struct {
 	Channel  string           `json:"channel,omitempty"`
 	ServerID string           `json:"serverId,omitempty"`
 	Content  ContentInterface `json:"content,omitempty"`
+}
+
+type ClientMessage struct {
+	Message
+	Client *Client
 }
 
 type WebRTCMessage struct {

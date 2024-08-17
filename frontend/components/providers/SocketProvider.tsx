@@ -56,7 +56,7 @@ export const WebSocketProvider = ({
         if (!authState.profile) {
             return;
         }
-
+        console.log(process.env.NEXT_PUBLIC_SOCKET_URL as string);
         const ws = new WebSocket(process.env.NEXT_PUBLIC_SOCKET_URL as string);
 
         ws.onopen = () => {
