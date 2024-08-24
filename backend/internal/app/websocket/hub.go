@@ -14,7 +14,9 @@ type Hub struct {
 	Broadcast       chan Message
 	ClientMessage   chan ClientMessage
 	Register        chan *Client
+	RegisterServer  chan ClientMessage
 	Unregister      chan *Client
+	UnregisterPeer  chan *PeerConnectionState
 	Channels        map[string]map[*Client]bool
 	Servers         map[string]map[*Client]bool
 	PeerChannels    map[string]map[string]map[*PeerConnectionState]bool
@@ -28,7 +30,9 @@ func NewHub() *Hub {
 		Broadcast:       make(chan Message),
 		ClientMessage:   make(chan ClientMessage),
 		Register:        make(chan *Client),
+		RegisterServer:  make(chan ClientMessage),
 		Unregister:      make(chan *Client),
+		UnregisterPeer:  make(chan *PeerConnectionState),
 		Clients:         make(map[*Client]bool),
 		Channels:        make(map[string]map[*Client]bool),
 		Servers:         make(map[string]map[*Client]bool),
@@ -44,53 +48,91 @@ func (h *Hub) Run() {
 			h.Clients[client] = true
 		case client := <-h.Unregister:
 			if _, ok := h.Clients[client]; ok {
+				log.Printf("Closing Client : %s", client.ID)
 				delete(h.Clients, client)
 				close(client.Send)
-				for channel := range h.Channels {
-					delete(h.Channels[channel], client)
-				}
-				for server := range h.Servers {
-					delete(h.Servers[server], client)
-				}
+				h.cleanupClient(client)
 			}
+		case peer := <-h.UnregisterPeer:
+			if _, ok := h.PeerChannels[peer.currentServer][peer.currentChannel][peer]; ok {
+				delete(h.PeerChannels[peer.currentServer][peer.currentChannel], peer)
+			}
+		case clientMessage := <-h.RegisterServer:
+			if _, ok := h.Servers[clientMessage.ServerID]; !ok {
+				h.Servers[clientMessage.ServerID] = make(map[*Client]bool)
+			}
+
+			h.Servers[clientMessage.ServerID][clientMessage.Client] = true
 		case message := <-h.Broadcast:
 			subscribers := h.Channels[message.Channel]
 			for client := range subscribers {
 				select {
 				case client.Send <- message:
 				default:
+					log.Printf("Closing Broadcasting to channel : %s", message.Channel)
 					close(client.Send)
 					delete(h.Clients, client)
-					for channel := range h.Channels {
-						delete(h.Channels[channel], client)
-					}
+					h.cleanupClient(client)
 				}
 			}
 		case message := <-h.BroadcastServer:
 			log.Println("Broadcasting to server : %s", message.ServerID)
 			for client := range h.Servers[message.ServerID] {
-				select {
-				case client.Send <- message:
-				default:
-					close(client.Send)
-					delete(h.Clients, client)
-					for server := range h.Servers {
-						delete(h.Servers[server], client)
+				client.Add(1)
+				go func(client *Client) {
+					defer client.Done()
+					select {
+					case client.Send <- message:
+					default:
+						log.Println("Closing Broadcasting to server : %s", message.ServerID)
+						client.Wait()
+						close(client.Send)
+						delete(h.Clients, client)
+						h.cleanupClient(client)
 					}
-				}
+				}(client)
+				// select {
+				// case client.Send <- message:
+				// default:
+				// 	log.Println("Closing Broadcasting to server : %s", message.ServerID)
+				// 	close(client.Send)
+				// 	delete(h.Clients, client)
+				// 	h.cleanupClient(client)
+				// }
 			}
 		case clientMessage := <-h.ClientMessage:
 			client := clientMessage.Client
-			select {
-			case client.Send <- clientMessage.Message:
-			default:
-				close(client.Send)
-				delete(h.Clients, client)
-				for server := range h.Servers {
-					delete(h.Servers[server], client)
+			client.Add(1)
+			go func(client *Client) {
+				defer client.Done()
+				select {
+				case client.Send <- clientMessage.Message:
+				default:
+					log.Printf("Closing Client : %s", client.ID)
+					client.Wait()
+					close(client.Send)
+					delete(h.Clients, client)
+					h.cleanupClient(client)
 				}
-			}
+			}(client)
+			// select {
+			// case client.Send <- clientMessage.Message:
+			// default:
+			// 	log.Printf("Closing Client : %s", client.ID)
+			// 	close(client.Send)
+			// 	delete(h.Clients, client)
+			// 	h.cleanupClient(client)
+			// }
 		}
+	}
+}
+
+func (h *Hub) cleanupClient(client *Client) {
+	for channel := range h.Channels {
+		delete(h.Channels[channel], client)
+	}
+	for server := range h.Servers {
+		delete(h.Servers[server], client)
 	}
 }
 
@@ -100,6 +142,7 @@ func (h *Hub) BroadcastToChannel(msg Message) {
 			select {
 			case client.Send <- msg:
 			default:
+				log.Println("BroadcastToChannel cause CLOSE")
 				close(client.Send)
 				delete(h.Clients, client)
 				for ch := range h.Channels {
@@ -109,26 +152,6 @@ func (h *Hub) BroadcastToChannel(msg Message) {
 		}
 	} else {
 		log.Printf("No subscribers in channel: %s", msg.Channel)
-	}
-}
-
-func (h *Hub) BroadcastToServer(msg Message) {
-	h.RLock()
-	defer h.RUnlock()
-	if clients, ok := h.Servers[msg.ServerID]; ok {
-		for client := range clients {
-			select {
-			case client.Send <- msg:
-			default:
-				close(client.Send)
-				delete(h.Clients, client)
-				for sv := range h.Servers {
-					delete(h.Servers[sv], client)
-				}
-			}
-		}
-	} else {
-		log.Printf("No subscribers in server: %s", msg.ServerID)
 	}
 }
 

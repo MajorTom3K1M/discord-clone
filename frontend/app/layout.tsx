@@ -9,6 +9,7 @@ import { ModalProvider } from '@/components/providers/ModalProvider';
 import { WebSocketProvider } from '@/components/providers/SocketProvider';
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import { ParticipantProvider } from '@/components/providers/ParticipantProvider';
+import { WebRTCProvider } from '@/components/providers/WebRTCProvider';
 
 const inter = Open_Sans({ subsets: ['latin'] })
 
@@ -38,12 +39,14 @@ export default function RootLayout({
         >
           <AuthProvider>
             <WebSocketProvider>
-              <ParticipantProvider>
-                <ModalProvider />
-                <QueryProvider>
-                  {children}
-                </QueryProvider>
-              </ParticipantProvider>
+              <WebRTCProvider>
+                <ParticipantProvider>
+                  <ModalProvider />
+                  <QueryProvider>
+                    {children}
+                  </QueryProvider>
+                </ParticipantProvider>
+              </WebRTCProvider>
             </WebSocketProvider>
           </AuthProvider>
         </ThemeProvider>

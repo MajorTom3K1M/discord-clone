@@ -1,30 +1,58 @@
-"use client"
-import { useWebSocket } from "@/components/providers/SocketProvider";
-import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from 'react';
+"use client";
+import { createContext, use, useContext, useEffect, useRef, useState } from "react";
+import { useWebSocket } from "./SocketProvider";
 
 interface Message {
     type: string;
     channel: string;
+    serverId: string;
     content: {
         data?: string;
         username?: string;
         streamId?: string;
         imageURL?: string;
     }
-}
+};
 
 interface ChannelConfig {
     channel: string;
     serverId: string;
-}
+};
 
+type WebRTCContextType = {
+    localStream: MediaStream | null;
+    remoteStreams: MediaStream[];
+    isConnected: boolean;
+    joinChannel: (channel: string, serverId: string) => void;
+    closeChannel: () => void;
+};
 
-export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
+const WebRTCContext = createContext<WebRTCContextType>({
+    localStream: null,
+    remoteStreams: [],
+    isConnected: false,
+    joinChannel: () => {},
+    closeChannel: () => {}
+});
+
+export const useWebRTC = () => {
+    const context = useContext(WebRTCContext);
+    if (!context) {
+        throw new Error('useWebRTC must be used within a WebRTCProvider');
+    }
+    return context;
+};
+
+export const WebRTCProvider = ({
+    children
+}: {
+    children: React.ReactNode
+}) => {
     const { socket, isConnected, sendWebRTCMessage } = useWebSocket();
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStreams, setRemoteStreams] = useState<MediaStream[]>([]);
     const [isReady, setIsReady] = useState<boolean>(false);
+    const [channelConfig, setChannelConfig] = useState<ChannelConfig | null>(null);
 
     const pcRef = useRef<RTCPeerConnection | null>(null);
 
@@ -33,12 +61,6 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
             { urls: 'stun:stun.l.google.com:19302' }
         ]
     };
-
-    useEffect(() => {
-        return () => {
-            if (pcRef.current) pcRef.current.close();
-        };
-    }, []);
 
     useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
@@ -61,7 +83,6 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
         };
 
         if (isConnected) {
-            // joinChannel();
             socket!.addEventListener('message', handleMessage);
 
             return () => {
@@ -71,13 +92,14 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
     }, [isConnected]);
 
     useEffect(() => {
-        if (isReady && isConnected) {
+        if (isReady && isConnected && channelConfig) {
             console.log("Send initializeCall");
-            sendWebRTCMessage('initializeCall', channel, serverId, { streamId: localStream?.id });
+            sendWebRTCMessage('initializeCall', channelConfig.channel, channelConfig.serverId, { streamId: localStream?.id });
         }
-    }, [isReady, isConnected])
+    }, [isReady, isConnected, channelConfig])
 
-    const createPeerConnection = async () => {
+
+    const createPeerConnection = async (channel: string, serverId: string) => {
         pcRef.current = new RTCPeerConnection(configuration);
 
         pcRef.current.ontrack = (event) => {
@@ -99,20 +121,36 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
         };
     };
 
-    const joinChannel = async () => {
+    const joinChannel = async (channel: string, serverId: string) => {
+        console.log("Joining channel", channel, serverId, isConnected);
+        if (!serverId) {
+            throw new Error("Server ID must be specified.")
+        }
+        
         if (!channel) {
             throw new Error("Channel must be specified.")
         }
 
-        await createPeerConnection();
+        setChannelConfig({ channel, serverId });
+        
+        await createPeerConnection(channel, serverId);
 
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setLocalStream(stream);
 
         stream.getTracks().forEach(track => {
-            pcRef.current!.addTrack(track, stream)
+            pcRef.current!.addTrack(track, stream);
             setIsReady(true);
         });
+    };
+
+    const closeChannel = async () => {
+        if (pcRef.current) pcRef.current.close();
+        setLocalStream(null);
+        setRemoteStreams([]);
+        setIsReady(false);
+        setChannelConfig(null);
+        sendWebRTCMessage('leave', channelConfig!.channel, channelConfig!.serverId, {});
     };
 
     const handleOfferMessage = async (message: Message) => {
@@ -129,7 +167,9 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
         const answer = await pcRef.current!.createAnswer();
         await pcRef.current!.setLocalDescription(answer);
 
-        sendWebRTCMessage('answer', channel, serverId, { answer });
+        if (channelConfig?.channel &&  channelConfig?.serverId) {
+            sendWebRTCMessage('answer', channelConfig.channel, channelConfig.serverId, { answer });
+        }
     };
 
     const handleCandidateMessage = (message: Message) => {
@@ -143,5 +183,9 @@ export const useWebRTC = ({ channel, serverId }: ChannelConfig) => {
         pcRef.current!.addIceCandidate(JSON.parse(candidate));
     };
 
-    return { joinChannel, localStream, remoteStreams, isConnected, peerConnection: pcRef }
+    return (
+        <WebRTCContext.Provider value={{ localStream, remoteStreams, isConnected, joinChannel, closeChannel }}>
+            {children}
+        </WebRTCContext.Provider>
+    );
 };

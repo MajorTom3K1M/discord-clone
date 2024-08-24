@@ -134,7 +134,8 @@ func (ps *PeerConnectionState) closePeerConnection() {
 		ps.peerConnection.Close()
 		// ps.peerConnection = nil
 
-		ps.client.Hub.BroadcastToServer(Message{
+		// ps.client.Hub.Lock()
+		ps.client.Hub.BroadcastServer <- Message{
 			Type:     "participant",
 			Channel:  ps.currentChannel,
 			ServerID: ps.currentServer,
@@ -145,27 +146,24 @@ func (ps *PeerConnectionState) closePeerConnection() {
 				ImageURL: ps.client.ImageURL,
 				ClientID: ps.client.ID,
 			},
-		})
+		}
+		// ps.client.Hub.Unlock()
 	}
 
 	ps.client.Hub.Lock()
 	defer ps.client.Hub.Unlock()
 	for pcState := range ps.client.Hub.PeerChannels[ps.currentServer][ps.currentChannel] {
 		if pcState.peerConnection == ps.peerConnection {
-			delete(ps.client.Hub.PeerChannels[ps.currentServer][ps.currentChannel], pcState)
+			ps.client.Hub.UnregisterPeer <- pcState
 			break
 		}
 	}
 	log.Printf("Peer connection closed for channel %s", ps.currentChannel)
 }
 
-// func (ps *PeerConnectionState) ChangeChannel(newServerId, newChannel string) error {
 func (c *Client) ChangeChannel(newServerId, newChannel string) (*PeerConnectionState, error) {
-	// log.Printf("Attempting to change channel from %s to %s", ps.currentChannel, newChannel)
-
 	c.PeerConnectionState.closePeerConnection()
 
-	// err := ps.initNewPeerConnection(newServerId, newChannel)
 	peerConnectionState, err := NewPeerConnectionState(c, newServerId, newChannel)
 	if err != nil {
 		log.Printf("Error initializing new peer connection: %v", err)
@@ -332,6 +330,7 @@ func (h *Hub) addTrack(serverId, channel string, t *webrtc.TrackRemote) *webrtc.
 	// Create a new TrackLocal with the same codec as our incoming
 	trackLocal, err := webrtc.NewTrackLocalStaticRTP(t.Codec().RTPCodecCapability, t.ID(), t.StreamID())
 	if err != nil {
+		log.Panicln("Error creating new track and panic")
 		panic(err)
 	}
 
@@ -368,7 +367,7 @@ func (h *Hub) signalPeerConnections(serverId, channel string) {
 
 		for pcState := range h.PeerChannels[serverId][channel] {
 			if pcState.peerConnection.ConnectionState() == webrtc.PeerConnectionStateClosed {
-				delete(h.PeerChannels[serverId][channel], pcState)
+				h.UnregisterPeer <- pcState
 				return true
 			}
 

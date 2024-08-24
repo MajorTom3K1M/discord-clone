@@ -17,10 +17,9 @@ import { ServerSearch } from './ServerSearch';
 import { ServerSection } from './ServerSection';
 import { ServerChannel } from './ServerChannel';
 import { ServerMember } from './ServerMember';
-import { UserAvatar } from '../UserAvatar';
 import { ServerChannelMember } from './ServerChannelMember';
-import { useWebRTC } from '@/hooks/useWebRTC';
 import { ServerFooter } from './ServerFooter';
+import ServerAction from './ServerAction';
 
 interface ServerSidebarProps {
     serverId: string;
@@ -166,27 +165,6 @@ export const ServerSidebar = async ({
                                         role={role}
                                         server={server}
                                     />
-                                    {/* <ServerChannelMember 
-                                        className='pl-8 pb-2'
-                                        channel={channel}
-                                        serverId={serverId}
-                                        // src='https://cdn.discordapp.com/avatars/293021833350086656/8b125db71d831bd62fb80818bc574777.webp'
-                                        // name={'MajorTom'}
-                                    /> */}
-                                    {/* <div className='pl-8 pb-2 text-zinc-500 dark:text-zinc-400 
-                                        hover:text-zinc-600 dark:hover:text-zinc-300 transition
-                                        text-[14px]'
-                                    >
-                                        <div className='relative flex items-center cursor-pointer flex-1 
-                                            hover:bg-zinc-700/10 dark:hover:bg-zinc-700/50 transition rounded-md
-                                            pt-1 pb-1'>
-                                            <UserAvatar
-                                                className='h-6 w-6 md:h-6 md:w-6 ml-2 mr-2'
-                                                src='https://cdn.discordapp.com/avatars/293021833350086656/8b125db71d831bd62fb80818bc574777.webp'
-                                            />
-                                            MajorTom
-                                        </div>
-                                    </div> */}
                                 </div>
                             ))}
                         </div>
@@ -239,22 +217,10 @@ export const ServerSidebar = async ({
                     </div>
                 )}
             </ScrollArea>
+            <ServerAction />
             <ServerFooter
                 role={role}
             />
-            {/* <div className="flex items-center p-2 dark:bg-[#222327] bg-[#E3E5E8] drop-shadow-md justify-between">
-                <div className='flex items-center'>
-                    <UserAvatar
-                        src={"https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&dpr=2&w=80"}
-                        className="h-8 w-8 md:h-8 md:w-8 ml-1 mr-1"
-                    />
-                    <div className="text-xs">
-                        <h3 className='font-bold'>Matt Cooper</h3>
-                        <p className='font-thin'>Moderator</p>
-                    </div>
-                </div>
-                <Settings className='mr-2 h-5 w-5' />
-            </div> */}
         </div>
     )
 }

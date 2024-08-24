@@ -724,12 +724,12 @@ func (h *WebsocketHandler) WebSocketGetParticipants(hub *ws.Hub) gin.HandlerFunc
 		paramServerID := c.Param("serverId")
 		log.Println("participants called Server ID: ", paramServerID)
 
-		hub.BroadcastToServer(ws.Message{
-			Type:     "participants",
-			Channel:  "",
-			ServerID: paramServerID,
-			Content:  hub.GetUsersFromPeerChannelsServer(paramServerID),
-		})
+		// hub.BroadcastServer <- ws.Message{
+		// 	Type:     "participants",
+		// 	Channel:  "",
+		// 	ServerID: paramServerID,
+		// 	Content:  hub.GetUsersFromPeerChannelsServer(paramServerID),
+		// }
 
 		c.JSON(http.StatusOK, gin.H{"message": "Request participants successfully"})
 	}

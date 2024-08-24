@@ -13,7 +13,8 @@ const nextConfig = {
         "uploadthing.com",
         "utfs.io"
       ]
-    }
+    },
+    // reactStrictMode: false,
   }
 
 module.exports = nextConfig

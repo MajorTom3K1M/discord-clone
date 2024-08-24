@@ -1,10 +1,10 @@
 "use client";
 
-import { useWebRTC } from "@/hooks/useWebRTC";
+import { useWebRTC } from "@/components/providers/WebRTCProvider";
 import { MediaPanel } from "@/components/chat/video/MediaPanel";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useParticipant } from "@/components/providers/ParticipantProvider";
 
 interface VideoConferenceProps {
@@ -29,11 +29,16 @@ const getMediaPanelClassNames = (participantCount: number) => {
 
 export const VideoConference = ({ chatId, serverId }: VideoConferenceProps) => {
     const { authState } = useAuth();
-    const { localStream, remoteStreams, isConnected, joinChannel } = useWebRTC({ channel: chatId, serverId: serverId });
+    const { localStream, remoteStreams, isConnected, joinChannel } = useWebRTC();
     const { participant } = useParticipant();
 
+    const isMounted = useRef(false);
+
     useEffect(() => {
-        if (isConnected) joinChannel();
+        if (!isMounted.current && isConnected) {
+            isMounted.current = true;
+            joinChannel(chatId, serverId);
+        }
     }, [isConnected]);
 
     const participantCount = remoteStreams.length + 1;

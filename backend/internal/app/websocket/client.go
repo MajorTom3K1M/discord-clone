@@ -22,6 +22,7 @@ type Client struct {
 	StreamID            string
 	ImageURL            string
 	sync.Mutex
+	sync.WaitGroup
 }
 
 type ContentInterface interface{}
@@ -94,14 +95,16 @@ func (c *Client) ReadPump() {
 			break
 		}
 
+		c.Add(1)
 		switch msg.Type {
 		case "joined":
 			if msg.ServerID != "" {
-				if _, ok := c.Hub.Servers[msg.ServerID]; !ok {
-					c.Hub.Servers[msg.ServerID] = make(map[*Client]bool)
+				c.Hub.RegisterServer <- ClientMessage{
+					Client: c,
+					Message: Message{
+						ServerID: msg.ServerID,
+					},
 				}
-
-				c.Hub.Servers[msg.ServerID][c] = true
 
 				c.Send <- Message{
 					Type:     "participants",
@@ -173,6 +176,7 @@ func (c *Client) ReadPump() {
 					log.Println("Failed to add ICE candidate:", err)
 				}
 
+				// this should be change because one client can have multiple candidates and this should be runing one time
 				c.Hub.BroadcastServer <- Message{
 					Type:     "participant",
 					Channel:  msg.Channel,
@@ -187,32 +191,14 @@ func (c *Client) ReadPump() {
 				}
 			}
 		case "leave":
-			if msg.ServerID != "" {
-				if clients, ok := c.Hub.Servers[msg.ServerID]; ok {
-					delete(clients, c)
-					if len(clients) == 0 {
-						delete(c.Hub.Servers, msg.ServerID)
-					}
-					log.Printf("Client %s unsubscribed from server %s", c.ID, msg.ServerID)
-				}
-
-				c.Hub.BroadcastServer <- Message{
-					Type:     "participant",
-					Channel:  msg.Channel,
-					ServerID: msg.ServerID,
-					Content: &ContentData{
-						Data:     "left",
-						Username: c.Username,
-						StreamID: c.StreamID,
-						ImageURL: c.ImageURL,
-						ClientID: c.ID,
-					},
-				}
+			if c.PeerConnectionState != nil {
+				c.PeerConnectionState.closePeerConnection()
+				c.PeerConnectionState = nil
 			}
 		default:
 			log.Printf("Unknown message type received: %v", msg.Type)
 		}
-
+		c.Done()
 		// log.Printf("Received message: %v", msg.Type)
 	}
 
@@ -231,16 +217,20 @@ func (c *Client) WritePump() {
 		case message, ok := <-c.Send:
 			c.Conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
-				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				log.Printf("Closing Send channel for client %s", c.ID)
+				// c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
 			}
 
 			w, err := c.Conn.NextWriter(websocket.TextMessage)
 			if err != nil {
+				log.Printf("Error getting next writer: %v", err)
 				return
 			}
 
 			jsonMessage, err := json.Marshal(message)
 			if err != nil {
+				log.Printf("Error marshalling message: %v", err)
 				return
 			}
 			w.Write(jsonMessage)
@@ -280,6 +270,7 @@ func (m *Message) UnmarshalJSON(data []byte) error {
 	}
 
 	if err := json.Unmarshal(data, &aux); err != nil {
+		log.Printf("Error unmarshalling message: %v", err)
 		return err
 	}
 
@@ -288,6 +279,7 @@ func (m *Message) UnmarshalJSON(data []byte) error {
 	case "candidate", "answer", "initializeCall":
 		var webRTCMessage WebRTCMessage
 		if err := json.Unmarshal(aux.Content, &webRTCMessage); err != nil {
+			log.Printf("Error unmarshalling WebRTC message: %v", err)
 			return err
 		}
 		m.Content = webRTCMessage
