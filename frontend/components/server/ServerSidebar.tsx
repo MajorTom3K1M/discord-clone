@@ -217,7 +217,9 @@ export const ServerSidebar = async ({
                     </div>
                 )}
             </ScrollArea>
-            <ServerAction />
+            <ServerAction 
+                serverId={serverId}
+            />
             <ServerFooter
                 role={role}
             />

@@ -144,7 +144,7 @@ export const WebRTCProvider = ({
         });
     };
 
-    const closeChannel = async () => {
+    const closeChannel = () => {
         if (pcRef.current) pcRef.current.close();
         setLocalStream(null);
         setRemoteStreams([]);
