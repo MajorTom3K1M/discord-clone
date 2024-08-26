@@ -104,13 +104,11 @@ const ChannelIdPage = async ({
             ) : null}
 
             {channel.type === ChannelType.AUDIO ? (
-                <>
-
-                </>
+                <VideoConference chatId={channel.id} serverId={channel.serverID} streamConfig={{video: false, audio: true}} />
             ) : null}
 
             {channel.type === ChannelType.VIDEO ? (
-                <VideoConference chatId={channel.id} serverId={channel.serverID} />
+                <VideoConference chatId={channel.id} serverId={channel.serverID} streamConfig={{video: true, audio: true}} />
             ) : null}
         </div>
     );

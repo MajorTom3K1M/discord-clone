@@ -1,15 +1,22 @@
 "use client";
 
 import { useWebRTC } from "@/components/providers/WebRTCProvider";
+// import { useWebRTC } from "@/hooks/useWebRTC";
 import { MediaPanel } from "@/components/chat/video/MediaPanel";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useEffect, useRef } from "react";
 import { useParticipant } from "@/components/providers/ParticipantProvider";
 
+interface StreamConfig {
+    audio: boolean;
+    video: boolean;
+}
+
 interface VideoConferenceProps {
     chatId: string;
     serverId: string;
+    streamConfig: StreamConfig;
 }
 
 const getGridClassNames = (participantCount: number) => {
@@ -27,7 +34,7 @@ const getMediaPanelClassNames = (participantCount: number) => {
         : "";
 };
 
-export const VideoConference = ({ chatId, serverId }: VideoConferenceProps) => {
+export const VideoConference = ({ chatId, serverId, streamConfig = { audio: true, video: true } }: VideoConferenceProps) => {
     const { authState } = useAuth();
     const { localStream, remoteStreams, isConnected, joinChannel } = useWebRTC();
     const { participant } = useParticipant();
@@ -37,7 +44,7 @@ export const VideoConference = ({ chatId, serverId }: VideoConferenceProps) => {
     useEffect(() => {
         if (!isMounted.current && isConnected) {
             isMounted.current = true;
-            joinChannel(chatId, serverId);
+            joinChannel(chatId, serverId, streamConfig);
         }
     }, [isConnected]);
 

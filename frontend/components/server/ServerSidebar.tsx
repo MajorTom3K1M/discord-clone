@@ -165,6 +165,11 @@ export const ServerSidebar = async ({
                                         role={role}
                                         server={server}
                                     />
+                                    <ServerChannelMember
+                                        className='pl-8 pb-2'
+                                        channel={channel}
+                                        serverId={serverId}
+                                    />
                                 </div>
                             ))}
                         </div>

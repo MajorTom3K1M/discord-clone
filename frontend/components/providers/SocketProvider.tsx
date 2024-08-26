@@ -71,7 +71,7 @@ export const WebSocketProvider = ({
 
         ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
-            console.log("Received Message : ", message)
+            // console.log("Received Message : ", message)
             if (message.channel) {
                 const handlers = listeners.current.get(message.channel);
                 if (handlers) {
@@ -138,6 +138,7 @@ export const WebSocketProvider = ({
     };
 
     const sendWebRTCMessage = (type: string, channel: string, serverId: string, message: WebRTCMessage) => {
+        // console.log("Sending WebRTC Message", { type, channel, serverId, message });
         if (socket?.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify({ type: type, serverId: serverId, channel: channel, content: message }));
         }

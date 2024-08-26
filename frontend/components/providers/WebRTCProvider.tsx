@@ -19,11 +19,16 @@ interface ChannelConfig {
     serverId: string;
 };
 
+interface StreamConfig {
+    audio: boolean;
+    video: boolean;
+}
+
 type WebRTCContextType = {
     localStream: MediaStream | null;
     remoteStreams: MediaStream[];
     isConnected: boolean;
-    joinChannel: (channel: string, serverId: string) => void;
+    joinChannel: (channel: string, serverId: string, config: StreamConfig) => void;
     closeChannel: () => void;
 };
 
@@ -31,8 +36,8 @@ const WebRTCContext = createContext<WebRTCContextType>({
     localStream: null,
     remoteStreams: [],
     isConnected: false,
-    joinChannel: () => {},
-    closeChannel: () => {}
+    joinChannel: () => { },
+    closeChannel: () => { }
 });
 
 export const useWebRTC = () => {
@@ -51,7 +56,6 @@ export const WebRTCProvider = ({
     const { socket, isConnected, sendWebRTCMessage } = useWebSocket();
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStreams, setRemoteStreams] = useState<MediaStream[]>([]);
-    const [isReady, setIsReady] = useState<boolean>(false);
     const [channelConfig, setChannelConfig] = useState<ChannelConfig | null>(null);
 
     const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -91,22 +95,19 @@ export const WebRTCProvider = ({
         }
     }, [isConnected]);
 
-    useEffect(() => {
-        if (isReady && isConnected && channelConfig) {
-            console.log("Send initializeCall");
-            sendWebRTCMessage('initializeCall', channelConfig.channel, channelConfig.serverId, { streamId: localStream?.id });
-        }
-    }, [isReady, isConnected, channelConfig])
-
-
     const createPeerConnection = async (channel: string, serverId: string) => {
         pcRef.current = new RTCPeerConnection(configuration);
 
         pcRef.current.ontrack = (event) => {
             console.log("ontrack ", event);
-            if (event.track.kind === 'video') {
-                setRemoteStreams(prevStreams => [...prevStreams, event.streams[0]]);
-            }
+            
+            // Check if the stream associated with the track is already in the remoteStreams
+            setRemoteStreams(prevStreams => {
+                if (prevStreams.find(stream => stream.id === event.streams[0].id)) {
+                    return prevStreams;
+                }
+                return [...prevStreams, event.streams[0]];
+            });
 
             event.streams[0].onremovetrack = () => {
                 setRemoteStreams(prevStreams => prevStreams.filter(stream => stream.id !== event.streams[0].id));
@@ -121,34 +122,35 @@ export const WebRTCProvider = ({
         };
     };
 
-    const joinChannel = async (channel: string, serverId: string) => {
+    const joinChannel = async (channel: string, serverId: string, config: StreamConfig = { video: true, audio: true }) => {
         console.log("Joining channel", channel, serverId, isConnected);
         if (!serverId) {
             throw new Error("Server ID must be specified.")
         }
-        
+
         if (!channel) {
             throw new Error("Channel must be specified.")
         }
 
-        setChannelConfig({ channel, serverId });
-        
         await createPeerConnection(channel, serverId);
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia(config);
         setLocalStream(stream);
 
-        stream.getTracks().forEach(track => {
-            pcRef.current!.addTrack(track, stream);
-            setIsReady(true);
+        const addTrackPromises = stream.getTracks().map(track => {
+            return pcRef.current!.addTrack(track, stream);
         });
+
+        await Promise.all(addTrackPromises);
+
+        console.log("Initialized call");
+        sendWebRTCMessage('initializeCall', channel, serverId, { streamId: stream?.id });
     };
 
     const closeChannel = () => {
         if (pcRef.current) pcRef.current.close();
         setLocalStream(null);
         setRemoteStreams([]);
-        setIsReady(false);
         setChannelConfig(null);
         sendWebRTCMessage('leave', channelConfig!.channel, channelConfig!.serverId, {});
     };
@@ -167,9 +169,7 @@ export const WebRTCProvider = ({
         const answer = await pcRef.current!.createAnswer();
         await pcRef.current!.setLocalDescription(answer);
 
-        if (channelConfig?.channel &&  channelConfig?.serverId) {
-            sendWebRTCMessage('answer', channelConfig.channel, channelConfig.serverId, { answer });
-        }
+        sendWebRTCMessage('answer', message.channel, message.serverId, { answer });
     };
 
     const handleCandidateMessage = (message: Message) => {
