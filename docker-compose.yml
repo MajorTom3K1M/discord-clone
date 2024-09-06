@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: go_backend
+    ports:
+      - "8080:8080"
+    # volumes:
+    #   - ./backend:/app
+    depends_on:
+      - postgres
+    networks:
+      - app-network
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=discord
+      - SECRET_KEY=VERY_SECRET_NO_ONE_WILL_KNOW
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: react_frontend
+    ports:
+      - "3000:3000"
+    # volumes:
+    #   - ./frontend:/app
+    networks:
+      - app-network
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - UPLOADTHING_SECRET=
+      - UPLOADTHING_APP_ID=
+      - NEXT_PUBLIC_SOCKET_URL=ws://go_backend:8080/ws
+      - NEXT_PUBLIC_BACKEND_URL=http://go_backend:8080
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: discord
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+  
+volumes:
+  pgdata:
+
+networks:
+  app-network:
+    driver: bridge

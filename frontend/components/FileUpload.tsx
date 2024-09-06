@@ -1,6 +1,7 @@
 import { FileIcon, X } from 'lucide-react';
 import Image from 'next/image';
 
+import { cn } from "@/lib/utils";
 import { UploadDropzone } from '@/lib/uploadthing';
 
 import "@uploadthing/react/styles.css";
@@ -8,13 +9,15 @@ import "@uploadthing/react/styles.css";
 interface FileUploadProps {
     onChange: (url?: string) => void;
     value: string;
-    endpoint: "messageFile" | "serverImage";
+    endpoint: "messageFile" | "serverImage" | "profileImage";
+    className?: string;
 }
 
 export const FileUpload = ({
     onChange,
     value,
-    endpoint
+    endpoint,
+    className
 }: FileUploadProps) => {
     const fileType = value?.split(".").pop();
 
@@ -63,6 +66,7 @@ export const FileUpload = ({
 
     return (
         <UploadDropzone
+            className={cn(className)}
             endpoint={endpoint}
             onClientUploadComplete={(res) => {
                 onChange(res?.[0].url);

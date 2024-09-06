@@ -21,18 +21,14 @@ const SignIn = () => {
         console.log('Email:', email, 'Password:', password);
     };
 
-    const printCookie = () => {
-        console.log({ cookie: document.cookie })
-    };
-
     return (
         <div className="flex justify-center items-center h-screen">
-            <div className="bg-white p-8 rounded-lg shadow-lg max-w-sm w-full">
-                <h2 className="text-2xl font-semibold text-gray-700 text-center">Welcome back!</h2>
-                <p className="text-gray-500 text-center mb-6">We're so excited to see you again!</p>
+            <div className="bg-white dark:bg-[#2B2D31] bg-[#F2F3F5] p-8 rounded-lg shadow-lg max-w-sm w-full">
+                <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 text-center">Welcome back!</h2>
+                <p className="text-gray-500 dark:text-gray-400 text-center mb-6">We&apos;re so excited to see you again!</p>
                 <form onSubmit={handleSubmit}>
                     <div className="mb-4">
-                        <label htmlFor="email" className="block text-gray-700 text-sm font-semibold mb-2">
+                        <label htmlFor="email" className="block text-gray-700 dark:text-gray-200 text-sm font-semibold mb-2">
                             Email or Phone Number
                         </label>
                         <input
@@ -44,7 +40,7 @@ const SignIn = () => {
                         />
                     </div>
                     <div className="mb-6">
-                        <label htmlFor="password" className="block text-gray-700 text-sm font-semibold mb-2">
+                        <label htmlFor="password" className="block text-gray-700 dark:text-gray-200 text-sm font-semibold mb-2">
                             Password
                         </label>
                         <input
@@ -55,8 +51,7 @@ const SignIn = () => {
                             required
                         />
                         <button 
-                            className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                            onClick={printCookie}
+                            className="text-sm text-blue-500 hover:text-blue-800 hover:underline"
                         >
                             Forgot your password?
                         </button>
@@ -69,7 +64,7 @@ const SignIn = () => {
                         Log In
                     </button>
                 </form>
-                <p className="text-gray-500 text-xs text-center mt-4">
+                <p className="text-gray-500 dark:text-gray-400 text-xs text-center mt-4">
                     Need an account? {' '}
                     <Link href="/sign-up">
                         <button className="text-blue-500 hover:text-blue-800 hover:underline">

@@ -3,6 +3,8 @@ package handlers
 import (
 	"discord-backend/internal/app/models"
 	"discord-backend/internal/app/services"
+	customErrors "discord-backend/internal/app/utils"
+	"errors"
 	"net/http"
 	"time"
 
@@ -42,12 +44,30 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 		Password: profile.Password,
 	}
 
-	if err := h.ProfileService.CreateProfile(&newProfile); err != nil {
+	currentProfile, err := h.ProfileService.CreateProfile(&newProfile)
+	if err != nil {
+		if errors.Is(err, customErrors.ErrEmailOrUsernameTaken) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Email or username already taken"})
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Registration successful"})
+	tokens, err := services.GenerateTokens(currentProfile.ID, currentProfile.Name)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating JWT token"})
+		return
+	}
+
+	if err := h.TokenService.UpsertRefreshToken(currentProfile.ID, tokens["refreshToken"]); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error upsert JWT token to database"})
+		return
+	}
+
+	maxAge := int(time.Hour * 72 / time.Second)
+	c.SetCookie("refresh_token", tokens["refreshToken"], maxAge, "/", "", true, true)
+	c.SetCookie("access_token", tokens["accessToken"], maxAge, "/", "", false, true)
+	c.JSON(http.StatusOK, gin.H{"message": "Registration successful", "profile": currentProfile})
 }
 
 func (h *AuthHandler) SignIn(c *gin.Context) {

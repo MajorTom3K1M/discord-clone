@@ -58,9 +58,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return response.data;
     };
 
-    const signup = async (email: string, password: string) => {
-        const response = await axios.post('/signup', { email, password });
-        setAuthState(response.data.profile);
+    const signup = async (name: string, imageUrl: string, email: string, password: string) => {
+        const response = await axios.post('/signup', { name, imageUrl, email, password });
+        console.log(response.data);
+        if (response.status === 200) {
+            setAuthState({ profile: response.data.profile });
+            router.push("/");
+            router.refresh();
+        }
         return response.data;
     };
 
@@ -104,7 +109,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return (
         <AuthContext.Provider value={{ authState, signin, signout, signup, isPublicPage }}>
             {
-            authState.profile === null && !isPublicPage
+            authState?.profile === null && !isPublicPage
                 ? (
                     <div className="flex flex-col flex-1 justify-center items-center h-full">
                         <Loader2 className="h-7 w-7 text-zinc-500 animate-spin my-4" />
