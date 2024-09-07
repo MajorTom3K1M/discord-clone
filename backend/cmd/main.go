@@ -21,6 +21,8 @@ func main() {
 		allowedOrigins = "http://localhost:3000" // Fallback to default if not set
 	}
 
+	log.Printf("Allowed origins: %s", allowedOrigins)
+
 	// Split the origins into a slice
 	origins := strings.Split(allowedOrigins, ",")
 
