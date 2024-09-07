@@ -5,11 +5,16 @@ import { createUploadthing, type FileRouter } from 'uploadthing/next';
 const f = createUploadthing();
 
 const handleAuth = (req: NextRequest) => {
-    const token = req.cookies.get('access_token')?.value as string;
-
-    if (!token) throw new Error("Unauthorized");
-    const payload = decodeJwtPayload(token);
-    return { profileId: payload.profile_id };
+    try {
+        const token = req.cookies.get('access_token')?.value as string;
+    
+        if (!token) throw new Error("Unauthorized");
+        const payload = decodeJwtPayload(token);
+        return { profileId: payload.profile_id };
+    } catch (err) {
+        console.error(err);
+        throw new Error("Unauthorized");
+    }
 };
 
 export const ourFileRouter = {
