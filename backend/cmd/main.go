@@ -28,6 +28,8 @@ func main() {
 	config := cors.DefaultConfig()
 	config.AllowOrigins = origins
 	config.AllowCredentials = true // Important for cookies
+	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	r.Use(cors.New(config))
 
 	database, err := db.ConnectToDB()
