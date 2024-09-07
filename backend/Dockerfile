@@ -5,7 +5,8 @@ RUN apk add --no-cache postgresql-client
 WORKDIR /app
 
 COPY go.mod go.sum ./
-RUN go mod download
+# Create an empty .env file
+RUN go mod download && touch .env
 
 COPY . .
 
