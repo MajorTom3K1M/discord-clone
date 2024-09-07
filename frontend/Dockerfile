@@ -1,30 +1,36 @@
-# Stage 1: Build (in a Linux environment)
+FROM node:18-alpine AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN  npm install --production
+
 FROM node:18-alpine AS builder
 WORKDIR /app
-
-# Copy package files and install dependencies
-COPY package.json package-lock.json ./
-RUN npm install
-
-# Copy the rest of the application code and build
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+ENV NEXT_TELEMETRY_DISABLED 1
+
 RUN npm run build
 
-# Stage 2: Production (in a Linux environment)
-FROM node:18-alpine
+FROM node:18-alpine AS runner
 WORKDIR /app
 
-# Install only production dependencies
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
-
-# Copy build artifacts from the builder stage
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-
-# Expose the application port
-EXPOSE 3000
 ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
 
-# Start the application
-CMD ["npm", "run", "start"]
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT 3000
+
+CMD ["npm", "start"]

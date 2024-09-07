@@ -5,6 +5,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    tty: true 
     container_name: go_backend
     ports:
       - "8080:8080"
@@ -21,6 +22,7 @@ services:
       - DB_PASSWORD=postgres
       - DB_NAME=discord
       - SECRET_KEY=VERY_SECRET_NO_ONE_WILL_KNOW
+    entrypoint: ["./wait-for-postgres.sh", "./main"]
 
   frontend:
     build:
