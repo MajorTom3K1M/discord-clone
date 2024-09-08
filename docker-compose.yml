@@ -74,9 +74,10 @@ services:
       - TURNSERVER_LISTEN_ON_PUBLIC_IP=1  # Ensures it listens on the public IP
     volumes:
       - coturn-data:/var/lib/turn
-      
+
 volumes:
   pgdata:
+  coturn-data:  # Volume for coturn data
 
 networks:
   app-network:
