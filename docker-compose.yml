@@ -58,6 +58,23 @@ services:
     networks:
       - app-network
   
+  coturn:
+    image: coturn/coturn
+    container_name: coturn
+    ports:
+      - "3478:3478/udp"  # STUN/TURN UDP port
+      - "3478:3478/tcp"  # STUN/TURN TCP port
+      - "5349:5349/tcp"  # Optional: TURN over TLS
+    networks:
+      - app-network
+    environment:
+      - TURNSERVER_ENABLED=true
+      - TURNSERVER_PORT=3478
+      - TURNSERVER_REALM=myrealm  # Custom realm
+      - TURNSERVER_LISTEN_ON_PUBLIC_IP=1  # Ensures it listens on the public IP
+    volumes:
+      - coturn-data:/var/lib/turn
+      
 volumes:
   pgdata:
 
