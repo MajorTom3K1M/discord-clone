@@ -68,10 +68,8 @@ services:
     networks:
       - app-network
     environment:
-      - TURNSERVER_ENABLED=true
-      - TURNSERVER_PORT=3478
-      - TURNSERVER_REALM=myrealm  # Custom realm
-      - TURNSERVER_LISTEN_ON_PUBLIC_IP=1  # Ensures it listens on the public IP
+      - DETECT_EXTERNAL_IP=yes
+      - DETECT_RELAY_IP=yes
     volumes:
       - coturn-data:/var/lib/turn
 
