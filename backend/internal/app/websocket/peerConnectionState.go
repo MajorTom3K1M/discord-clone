@@ -21,35 +21,16 @@ type PeerConnectionState struct {
 }
 
 func NewPeerConnectionState(c *Client, serverId string, channel string) (*PeerConnectionState, error) {
+	// "stun:stun1.l.google.com:19302",
+	// "stun:stun2.l.google.com:19302",
+	// "stun:stun3.l.google.com:19302",
+	// "stun:stun4.l.google.com:19302",
 	peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{
-				URLs: []string{
-					"stun:stun.l.google.com:19302",
-					"stun:stun1.l.google.com:19302",
-					"stun:stun2.l.google.com:19302",
-					"stun:stun3.l.google.com:19302",
-					"stun:stun4.l.google.com:19302",
-					"stun:stunserver.org",
-					"stun:stunserver.org:3478",
-					"stun:stun.softjoys.com",
-					"stun:stun.voiparound.com",
-					"stun:stun.voipbuster.com",
-					"stun:stun.voipstunt.com",
-					"stun:stun.voxgratia.org",
-					"stun:stun.xten.com",
-					"stun:stun.voipzoom.com:3478",
-					"stun:stun.vopium.com:3478",
-					"stun:stun.voxox.com:3478",
-					"stun:stun.voys.nl:3478",
-					"stun:stun.voztele.com:3478",
-					"stun:stun.vyke.com:3478",
-					"stun:stun.webcalldirect.com:3478",
-					"stun:stun.whoi.edu:3478",
-					"stun:stun.wifirst.net:3478",
-					"stun:stun.wwdl.net:3478",
-					"stun:stun.xs4all.nl:3478",
-				},
+				URLs:       []string{"turn:139.59.127.221:3478?transport=tcp"},
+				Username:   "user",
+				Credential: "root",
 			},
 		},
 	})
