@@ -57,22 +57,7 @@ services:
       - pgdata:/var/lib/postgresql/data
     networks:
       - app-network
-  
-  coturn:
-    image: coturn/coturn
-    container_name: coturn
-    ports:
-      - "3478:3478/udp"  # STUN/TURN UDP port
-      - "3478:3478/tcp"  # STUN/TURN TCP port
-      - "5349:5349/tcp"  # Optional: TURN over TLS
-    networks:
-      - app-network
-    environment:
-      - DETECT_EXTERNAL_IP=yes
-      - DETECT_RELAY_IP=yes
-    volumes:
-      - coturn-data:/var/lib/turn
-
+      
 volumes:
   pgdata:
   coturn-data:  # Volume for coturn data
