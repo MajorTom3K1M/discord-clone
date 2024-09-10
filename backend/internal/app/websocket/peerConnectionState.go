@@ -28,10 +28,7 @@ func NewPeerConnectionState(c *Client, serverId string, channel string) (*PeerCo
 	peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{
 		ICEServers: []webrtc.ICEServer{
 			{
-				URLs: []string{"stun:139.59.127.221:3478"},
-			},
-			{
-				URLs:       []string{"turn:139.59.127.221:3478?transport=tcp"},
+				URLs:       []string{"turn:turn.jkrn.me:3478"},
 				Username:   "user",
 				Credential: "root",
 			},

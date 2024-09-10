@@ -62,7 +62,9 @@ export const WebRTCProvider = ({
     const configuration: RTCConfiguration = {
         iceServers: [
             {
-                urls: 'stun:stun.l.google.com:19302'
+                urls: 'turn:turn.jkrn.me:3478',
+                username: 'user',
+                credential: 'root'
             }
         ]
     };
