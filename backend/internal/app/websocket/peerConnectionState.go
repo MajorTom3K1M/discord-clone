@@ -21,7 +21,19 @@ type PeerConnectionState struct {
 }
 
 func NewPeerConnectionState(c *Client, serverId string, channel string) (*PeerConnectionState, error) {
-	peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	// "stun:stun1.l.google.com:19302",
+	// "stun:stun2.l.google.com:19302",
+	// "stun:stun3.l.google.com:19302",
+	// "stun:stun4.l.google.com:19302",
+	peerConnection, err := webrtc.NewPeerConnection(webrtc.Configuration{
+		ICEServers: []webrtc.ICEServer{
+			{
+				URLs:       []string{"turn:turn.jkrn.me:3478"},
+				Username:   "user",
+				Credential: "root",
+			},
+		},
+	})
 	if err != nil {
 		return nil, err
 	}

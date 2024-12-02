@@ -5,6 +5,8 @@ import (
 	"discord-backend/internal/db"
 	"discord-backend/internal/routes"
 	"log"
+	"os"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -13,10 +15,23 @@ import (
 func main() {
 	r := gin.Default()
 
+	// Get allowed origins from environment variable
+	allowedOrigins := os.Getenv("CORS_ALLOWED_ORIGINS")
+	if allowedOrigins == "" {
+		allowedOrigins = "http://localhost:3000" // Fallback to default if not set
+	}
+
+	log.Printf("Allowed origins: %s", allowedOrigins)
+
+	// Split the origins into a slice
+	origins := strings.Split(allowedOrigins, ",")
+
 	// Configure CORS to allow your frontend domain, e.g., http://localhost:3000
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"http://localhost:3000"}
+	config.AllowOrigins = origins
 	config.AllowCredentials = true // Important for cookies
+	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	r.Use(cors.New(config))
 
 	database, err := db.ConnectToDB()

@@ -59,6 +59,7 @@ export const VideoConference = ({ chatId, serverId, streamConfig = { audio: true
                     media={localStream}
                     name={authState.profile?.name}
                     className={mediaPanelClassNames}
+                    isRemote={false}
                 />
                 {remoteStreams.map((remoteStream) => (
                     <MediaPanel
@@ -66,6 +67,7 @@ export const VideoConference = ({ chatId, serverId, streamConfig = { audio: true
                         media={remoteStream}
                         name={participant[chatId]?.find((p) => p.streamId === remoteStream.id)?.username}
                         className={mediaPanelClassNames}
+                        isRemote={true}
                     />
                 ))}
             </div>

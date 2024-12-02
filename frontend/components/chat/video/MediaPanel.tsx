@@ -7,9 +7,14 @@ interface MediaPanelProps {
     media?: MediaStream | null;
     name?: string;
     className?: string;
+    isRemote?: boolean;
+    config?: {
+        audio: boolean;
+        video: boolean;
+    };
 }
 
-export const MediaPanel = ({ media, className, name }: MediaPanelProps) => {
+export const MediaPanel = ({ media, className, name, isRemote, config }: MediaPanelProps) => {
     const setVideoRef = (video: HTMLVideoElement | null) => {
         if (video && media) {
             video.srcObject = media;
@@ -23,7 +28,7 @@ export const MediaPanel = ({ media, className, name }: MediaPanelProps) => {
                 <video
                     className="rounded-lg h-full w-full dark:bg-[#1E1F22] bg-[#E3E5E8]"
                     autoPlay
-                    muted
+                    muted={!isRemote}
                     ref={setVideoRef}
                 />
                 <div className="absolute flex bottom-0 justify-between w-full p-3 h-[55px]">

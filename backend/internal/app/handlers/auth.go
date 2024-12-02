@@ -3,6 +3,9 @@ package handlers
 import (
 	"discord-backend/internal/app/models"
 	"discord-backend/internal/app/services"
+	"discord-backend/internal/app/utils"
+	customErrors "discord-backend/internal/app/utils"
+	"errors"
 	"net/http"
 	"time"
 
@@ -42,12 +45,32 @@ func (h *AuthHandler) SignUp(c *gin.Context) {
 		Password: profile.Password,
 	}
 
-	if err := h.ProfileService.CreateProfile(&newProfile); err != nil {
+	currentProfile, err := h.ProfileService.CreateProfile(&newProfile)
+	if err != nil {
+		if errors.Is(err, customErrors.ErrEmailOrUsernameTaken) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Email or username already taken"})
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Registration successful"})
+	tokens, err := services.GenerateTokens(currentProfile.ID, currentProfile.Name)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error generating JWT token"})
+		return
+	}
+
+	if err := h.TokenService.UpsertRefreshToken(currentProfile.ID, tokens["refreshToken"]); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error upsert JWT token to database"})
+		return
+	}
+
+	host := c.Request.Host
+	domain := utils.ExtractBaseDomain(host)
+	maxAge := int(time.Hour * 72 / time.Second)
+	c.SetCookie("refresh_token", tokens["refreshToken"], maxAge, "/", domain, true, true)
+	c.SetCookie("access_token", tokens["accessToken"], maxAge, "/", domain, false, true)
+	c.JSON(http.StatusOK, gin.H{"message": "Registration successful", "profile": currentProfile})
 }
 
 func (h *AuthHandler) SignIn(c *gin.Context) {
@@ -79,9 +102,11 @@ func (h *AuthHandler) SignIn(c *gin.Context) {
 
 	// c.Header("Authorization", "Bearer "+tokens["accessToken"])
 
+	host := c.Request.Host
+	domain := utils.ExtractBaseDomain(host)
 	maxAge := int(time.Hour * 72 / time.Second)
-	c.SetCookie("refresh_token", tokens["refreshToken"], maxAge, "/", "", true, true)
-	c.SetCookie("access_token", tokens["accessToken"], maxAge, "/", "", false, true)
+	c.SetCookie("refresh_token", tokens["refreshToken"], maxAge, "/", domain, true, true)
+	c.SetCookie("access_token", tokens["accessToken"], maxAge, "/", domain, false, true)
 	c.JSON(http.StatusOK, gin.H{"message": "Login successful", "profile": profile})
 }
 
@@ -106,8 +131,10 @@ func (h *AuthHandler) SignOut(c *gin.Context) {
 		h.TokenService.DeleteRefreshToken(profileID, refreshTokenCookie.Value)
 	}
 
-	c.SetCookie("access_token", "", -1, "/", "", false, true)
-	c.SetCookie("refresh_token", "", -1, "/", "", true, true)
+	host := c.Request.Host
+	domain := utils.ExtractBaseDomain(host)
+	c.SetCookie("access_token", "", -1, "/", domain, false, true)
+	c.SetCookie("refresh_token", "", -1, "/", domain, true, true)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
@@ -167,8 +194,10 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	}
 
 	maxAge := int(time.Hour * 72 / time.Second)
-	c.SetCookie("refresh_token", tokens["refreshToken"], maxAge, "/", "", true, true)
-	c.SetCookie("access_token", tokens["accessToken"], maxAge, "/", "", false, true)
+	host := c.Request.Host
+	domain := utils.ExtractBaseDomain(host)
+	c.SetCookie("refresh_token", tokens["refreshToken"], maxAge, "/", domain, true, true)
+	c.SetCookie("access_token", tokens["accessToken"], maxAge, "/", domain, false, true)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Tokens refreshed"})
 }

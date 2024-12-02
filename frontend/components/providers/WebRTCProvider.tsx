@@ -56,13 +56,16 @@ export const WebRTCProvider = ({
     const { socket, isConnected, sendWebRTCMessage } = useWebSocket();
     const [localStream, setLocalStream] = useState<MediaStream | null>(null);
     const [remoteStreams, setRemoteStreams] = useState<MediaStream[]>([]);
-    const [channelConfig, setChannelConfig] = useState<ChannelConfig | null>(null);
 
     const pcRef = useRef<RTCPeerConnection | null>(null);
 
     const configuration: RTCConfiguration = {
         iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' }
+            {
+                urls: 'turn:turn.jkrn.me:3478',
+                username: 'user',
+                credential: 'root'
+            }
         ]
     };
 
@@ -100,7 +103,7 @@ export const WebRTCProvider = ({
 
         pcRef.current.ontrack = (event) => {
             console.log("ontrack ", event);
-            
+
             // Check if the stream associated with the track is already in the remoteStreams
             setRemoteStreams(prevStreams => {
                 if (prevStreams.find(stream => stream.id === event.streams[0].id)) {
@@ -143,6 +146,9 @@ export const WebRTCProvider = ({
 
         await Promise.all(addTrackPromises);
 
+        // Before initializing the call, we need to remove the stream from the remoteStreams
+        setRemoteStreams([]);
+
         console.log("Initialized call");
         sendWebRTCMessage('initializeCall', channel, serverId, { streamId: stream?.id });
     };
@@ -151,8 +157,7 @@ export const WebRTCProvider = ({
         if (pcRef.current) pcRef.current.close();
         setLocalStream(null);
         setRemoteStreams([]);
-        setChannelConfig(null);
-        sendWebRTCMessage('leave', channelConfig!.channel, channelConfig!.serverId, {});
+        sendWebRTCMessage('leave', "", "", {});
     };
 
     const handleOfferMessage = async (message: Message) => {
