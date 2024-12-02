@@ -43,7 +43,7 @@ Check out the live demo of the application here:
 [Live Demo](https://www.jkrn.me/)
 
 ## Website Sample
-![Website Screenshot]([https://via.placeholder.com/1200x700?text=Website+Preview](https://github.com/MajorTom3K1M/discord-clone/blob/main/screenshot/screenshot-1.png))
+![Website Screenshot](https://github.com/MajorTom3K1M/discord-clone/blob/main/screenshot/screenshot-1.png)
 
 ## Getting Started
 
