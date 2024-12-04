@@ -66,7 +66,7 @@ Check out the live demo of the application here:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-repo/discord-clone.git
+   git clone https://github.com/MajorTom3K1M/discord-clone.git
    cd discord-clone
    ```
 
