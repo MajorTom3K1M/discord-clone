@@ -35,7 +35,7 @@ export default function StickyBubble() {
                             </Button>
                         </div>
                         <p className="text-sm mt-2">
-                            Don't want to create an account? Use these demo credentials:
+                            Don&apos;t want to create an account? Use these demo credentials:
                         </p>
                     </div>
                     <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-96' : 'max-h-0'}`}>
