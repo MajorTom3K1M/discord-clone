@@ -1,6 +1,8 @@
 "use client"
 import { ChangeEvent, FormEvent, useState } from 'react';
 import Link from 'next/link';
+import StickyBubble from '@/components/StickyBubble';
+
 import { useAuth } from '@/components/providers/AuthProvider';
 
 const SignIn = () => {
@@ -23,6 +25,7 @@ const SignIn = () => {
 
     return (
         <div className="flex justify-center items-center h-screen">
+            <StickyBubble />
             <div className="bg-white dark:bg-[#2B2D31] bg-[#F2F3F5] p-8 rounded-lg shadow-lg max-w-sm w-full">
                 <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 text-center">Welcome back!</h2>
                 <p className="text-gray-500 dark:text-gray-400 text-center mb-6">We&apos;re so excited to see you again!</p>

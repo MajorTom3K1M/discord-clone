@@ -137,20 +137,31 @@ export const WebRTCProvider = ({
 
         await createPeerConnection(channel, serverId);
 
-        const stream = await navigator.mediaDevices.getUserMedia(config);
-        setLocalStream(stream);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia(config);
+            setLocalStream(stream);
 
-        const addTrackPromises = stream.getTracks().map(track => {
-            return pcRef.current!.addTrack(track, stream);
-        });
+            const addTrackPromises = stream.getTracks().map(track => {
+                return pcRef.current!.addTrack(track, stream);
+            });
 
-        await Promise.all(addTrackPromises);
+            await Promise.all(addTrackPromises);
 
-        // Before initializing the call, we need to remove the stream from the remoteStreams
-        setRemoteStreams([]);
+            // Before initializing the call, we need to remove the stream from the remoteStreams
+            setRemoteStreams([]);
 
-        console.log("Initialized call");
-        sendWebRTCMessage('initializeCall', channel, serverId, { streamId: stream?.id });
+            console.log("Initialized call");
+            sendWebRTCMessage('initializeCall', channel, serverId, { streamId: stream?.id });
+        } catch (error) {
+            alert(
+                "You must allow access to a microphone and/or camera to use this feature. " +
+                "Please check your device settings."
+            );
+
+            if (pcRef.current) pcRef.current.close();
+            pcRef.current = null;
+            return;
+        }
     };
 
     const closeChannel = () => {
